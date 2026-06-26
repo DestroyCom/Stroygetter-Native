@@ -5,6 +5,7 @@ use std::sync::Mutex;
 pub struct DbConn(pub Mutex<Connection>);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct DownloadRecord {
     pub id: String,
     pub url: String,

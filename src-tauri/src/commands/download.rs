@@ -130,7 +130,7 @@ pub async fn download_audio(
     let args = vec![
         "-x".to_string(),
         "--audio-format".to_string(), "mp3".to_string(),
-        "--audio-quality".to_string(), "190K".to_string(),
+        "--audio-quality".to_string(), "192K".to_string(),
         "-o".to_string(), out_str.clone(),
         url.clone(),
     ];

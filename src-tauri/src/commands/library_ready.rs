@@ -71,7 +71,7 @@ pub async fn download_library_ready(
         &app,
         "yt-dlp",
         &[
-            "-x", "--audio-format", "mp3", "--audio-quality", "190K",
+            "-x", "--audio-format", "mp3", "--audio-quality", "192K",
             "-o", &tmp_audio.to_string_lossy(),
             &url,
         ],
@@ -93,12 +93,6 @@ pub async fn download_library_ready(
 
     // Phase 3: embed with ffmpeg
     emit_progress(&app, "embedding", 0.0);
-
-    // Write LRC lyrics to temp file for ffmpeg
-    let tmp_lrc = std::env::temp_dir().join(format!("{}.lrc", safe));
-    if !lyrics_lrc.is_empty() {
-        std::fs::write(&tmp_lrc, &lyrics_lrc).map_err(|e| e.to_string())?;
-    }
 
     let mut ffmpeg_args: Vec<String> = vec![
         "-y".to_string(),
@@ -148,7 +142,6 @@ pub async fn download_library_ready(
     // Cleanup temp files
     let _ = std::fs::remove_file(&tmp_audio);
     let _ = std::fs::remove_file(&tmp_cover);
-    let _ = std::fs::remove_file(&tmp_lrc);
 
     let out_str = out.to_string_lossy().to_string();
 

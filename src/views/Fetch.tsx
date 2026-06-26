@@ -29,7 +29,7 @@ export function Fetch() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const unlistenRef = useRef<(() => void) | null>(null);
+  const unlistenRef = useRef<Promise<() => void> | null>(null);
 
   useEffect(() => {
     if (!url) { navigate("/"); return; }
@@ -43,10 +43,11 @@ export function Fetch() {
   }, [url, navigate]);
 
   useEffect(() => {
-    onDownloadProgress((p) => setProgress(p.percent)).then((unlisten) => {
-      unlistenRef.current = unlisten;
-    });
-    return () => { unlistenRef.current?.(); };
+    const p = onDownloadProgress((p) => setProgress(p.percent));
+    unlistenRef.current = p;
+    return () => {
+      p.then((unlisten) => unlisten());
+    };
   }, []);
 
   const handleDownload = async (fmt: DownloadFormat, quality: string) => {
