@@ -1,10 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "./globals.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <div style={{ color: "white", background: "#0f172a", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <h1>Hello StroyGetter</h1>
+    <div className="min-h-screen bg-stroy-950 text-white flex items-center justify-center">
+      <h1 className="text-3xl font-bold">Hello StroyGetter</h1>
     </div>
   </React.StrictMode>
 );
