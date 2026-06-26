@@ -5,3 +5,10 @@ target/
 src-tauri/gen/
 *.env
 .DS_Store
+
+# Fichiers source web (référence — pas part du projet natif)
+/globals.css
+/assets/
+/components/
+/messages/
+/favicon.ico
