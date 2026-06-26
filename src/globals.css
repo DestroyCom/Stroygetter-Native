@@ -105,6 +105,6 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-stroy-500 text-white;
+    @apply bg-stroy-950 text-white;
   }
 }
