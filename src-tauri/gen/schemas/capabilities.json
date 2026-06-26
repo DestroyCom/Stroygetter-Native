@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capabilities for stroygetter-native","local":true,"windows":["main"],"permissions":["core:default",{"identifier":"shell:allow-execute","allow":[{"name":"yt-dlp","sidecar":true},{"name":"ffmpeg","sidecar":true}]},"shell:allow-open","dialog:allow-open"]}}
