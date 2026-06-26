@@ -28,5 +28,26 @@ export const downloadTwitch = (
 ): Promise<string> =>
   invoke("download_twitch", { url, formatId, title, author, thumbnail });
 
+export const downloadLibraryReady = (params: {
+  url: string;
+  title: string;
+  artist: string;
+  album: string;
+  year: string;
+  coverUrl: string;
+  lyricsLrc: string;
+  thumbnail?: string;
+}): Promise<string> =>
+  invoke("download_library_ready", {
+    url: params.url,
+    title: params.title,
+    artist: params.artist,
+    album: params.album,
+    year: params.year,
+    coverUrl: params.coverUrl,
+    lyricsLrc: params.lyricsLrc,
+    thumbnail: params.thumbnail,
+  });
+
 export const onDownloadProgress = (cb: (p: DownloadProgress) => void) =>
   listen<DownloadProgress>("download://progress", (e) => cb(e.payload));

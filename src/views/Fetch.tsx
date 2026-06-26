@@ -7,12 +7,14 @@ import { VideoLoading } from "@/components/custom/VideoLoading";
 import { VideoSelect } from "@/components/custom/VideoSelect";
 import {
   downloadAudio,
+  downloadLibraryReady,
   downloadTiktok,
   downloadTwitch,
   downloadVideo,
   fetchVideoInfo,
   onDownloadProgress,
 } from "@/lib/commands";
+import { resolveLibraryReadyMetadata } from "@/lib/metadata";
 import type { DownloadFormat, VideoInfo } from "@/lib/types";
 
 export function Fetch() {
@@ -68,8 +70,21 @@ export function Fetch() {
         await downloadTwitch(url, quality, info.title, info.author, info.thumbnail);
       } else if (fmt === "twitch-audio") {
         await downloadTwitch(url, "audio", info.title, info.author, info.thumbnail);
+      } else if (fmt === "library-ready") {
+        const videoId = url.match(/[?&]v=([^&]+)/)?.[1] ?? "";
+        const meta = await resolveLibraryReadyMetadata(info.title, videoId);
+        await downloadLibraryReady({
+          url,
+          title: meta.title,
+          artist: meta.artist,
+          album: meta.album,
+          year: meta.year,
+          coverUrl: meta.coverUrl,
+          lyricsLrc: meta.lyricsLrc,
+          thumbnail: info.thumbnail,
+        });
       }
-      // library-ready handled in Task 12
+      window.dispatchEvent(new Event("download-complete"));
     } catch (e: unknown) {
       setDownloadError(e instanceof Error ? e.message : t("videoSelect.errorDownload"));
     } finally {
