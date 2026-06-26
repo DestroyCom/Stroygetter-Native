@@ -1,8 +1,32 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { VideoInfo, DownloadRecord } from "./types";
+import { listen } from "@tauri-apps/api/event";
+import type { VideoInfo, DownloadRecord, DownloadProgress } from "./types";
 
 export const fetchVideoInfo = (url: string): Promise<VideoInfo> =>
   invoke("fetch_video_info", { url });
 
 export const getHistory = (): Promise<DownloadRecord[]> =>
   invoke("get_history");
+
+export const downloadVideo = (
+  url: string, itag: string, title: string, author: string, thumbnail?: string
+): Promise<string> =>
+  invoke("download_video", { url, itag, title, author, thumbnail });
+
+export const downloadAudio = (
+  url: string, title: string, author: string, thumbnail?: string
+): Promise<string> =>
+  invoke("download_audio", { url, title, author, thumbnail });
+
+export const downloadTiktok = (
+  url: string, watermark: boolean, audioOnly: boolean, title: string, author: string, thumbnail?: string
+): Promise<string> =>
+  invoke("download_tiktok", { url, watermark, audioOnly, title, author, thumbnail });
+
+export const downloadTwitch = (
+  url: string, formatId: string, title: string, author: string, thumbnail?: string
+): Promise<string> =>
+  invoke("download_twitch", { url, formatId, title, author, thumbnail });
+
+export const onDownloadProgress = (cb: (p: DownloadProgress) => void) =>
+  listen<DownloadProgress>("download://progress", (e) => cb(e.payload));
