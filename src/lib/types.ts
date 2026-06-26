@@ -9,7 +9,7 @@ export interface VideoInfo {
   author: string;
   thumbnail?: string;
   duration?: number;
-  source: "youtube" | "tiktok" | "twitch";
+  source: "youtube" | "tiktok" | "twitch" | "unknown";
   formats: FormatEntry[];
 }
 
