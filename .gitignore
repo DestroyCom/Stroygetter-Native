@@ -1,0 +1,6 @@
+.worktrees/
+node_modules/
+dist/
+target/
+*.env
+.DS_Store
