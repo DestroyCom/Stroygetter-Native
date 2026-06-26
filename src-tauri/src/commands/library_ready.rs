@@ -1,1 +1,183 @@
-// Task 11: library_ready command — stub
+use crate::db::{self, DbConn, DownloadRecord};
+use crate::sidecar;
+use serde::Serialize;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::sync::mpsc;
+
+#[derive(Serialize, Clone)]
+struct ProgressPayload {
+    phase: String,
+    percent: f64,
+}
+
+fn emit_progress(app: &AppHandle, phase: &str, percent: f64) {
+    let _ = app.emit("download://progress", ProgressPayload { phase: phase.to_string(), percent });
+}
+
+fn now_ts() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
+}
+
+fn sanitize(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' { c } else { '_' })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
+#[tauri::command]
+pub async fn download_library_ready(
+    app: AppHandle,
+    url: String,
+    title: String,
+    artist: String,
+    album: String,
+    year: String,
+    cover_url: String,
+    lyrics_lrc: String,
+    thumbnail: Option<String>,
+) -> Result<String, String> {
+    let safe = sanitize(&title);
+    let tmp_audio = std::env::temp_dir().join(format!("{}_audio.mp3", safe));
+    let tmp_cover = std::env::temp_dir().join(format!("{}_cover.jpg", safe));
+    let out = dirs::download_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(format!("{}.mp3", safe));
+
+    // Phase 1: download audio via yt-dlp
+    emit_progress(&app, "downloading", 0.0);
+
+    let (tx, mut rx) = mpsc::channel::<String>(100);
+    let app_clone = app.clone();
+    tokio::spawn(async move {
+        while let Some(line) = rx.recv().await {
+            if line.contains("[download]") {
+                if let Some(pct) = line.split_whitespace()
+                    .find(|p| p.ends_with('%'))
+                    .and_then(|p| p.trim_end_matches('%').parse::<f64>().ok())
+                {
+                    let _ = app_clone.emit("download://progress", ProgressPayload {
+                        phase: "downloading".to_string(),
+                        percent: pct,
+                    });
+                }
+            }
+        }
+    });
+
+    sidecar::run_sidecar(
+        &app,
+        "yt-dlp",
+        &[
+            "-x", "--audio-format", "mp3", "--audio-quality", "190K",
+            "-o", &tmp_audio.to_string_lossy(),
+            &url,
+        ],
+        Some(tx),
+    )
+    .await?;
+
+    // Phase 2: download cover image
+    emit_progress(&app, "fetching_cover", 0.0);
+
+    if !cover_url.is_empty() {
+        let response = reqwest::get(&cover_url)
+            .await
+            .map_err(|e| format!("cover download failed: {}", e))?;
+        let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+        std::fs::write(&tmp_cover, &bytes).map_err(|e| e.to_string())?;
+        emit_progress(&app, "fetching_cover", 100.0);
+    }
+
+    // Phase 3: embed with ffmpeg
+    emit_progress(&app, "embedding", 0.0);
+
+    // Write LRC lyrics to temp file for ffmpeg
+    let tmp_lrc = std::env::temp_dir().join(format!("{}.lrc", safe));
+    if !lyrics_lrc.is_empty() {
+        std::fs::write(&tmp_lrc, &lyrics_lrc).map_err(|e| e.to_string())?;
+    }
+
+    let mut ffmpeg_args: Vec<String> = vec![
+        "-y".to_string(),
+        "-i".to_string(), tmp_audio.to_string_lossy().to_string(),
+    ];
+
+    let has_cover = !cover_url.is_empty() && tmp_cover.exists();
+    if has_cover {
+        ffmpeg_args.extend(["-i".to_string(), tmp_cover.to_string_lossy().to_string()]);
+    }
+
+    ffmpeg_args.extend([
+        "-map".to_string(), "0:a".to_string(),
+        "-c:a".to_string(), "copy".to_string(),
+    ]);
+
+    if has_cover {
+        ffmpeg_args.extend([
+            "-map".to_string(), "1:v".to_string(),
+            "-c:v".to_string(), "copy".to_string(),
+            "-id3v2_version".to_string(), "3".to_string(),
+            "-metadata:s:v".to_string(), "title=Album cover".to_string(),
+            "-metadata:s:v".to_string(), "comment=Cover (front)".to_string(),
+        ]);
+    }
+
+    ffmpeg_args.extend([
+        "-metadata".to_string(), format!("title={}", title),
+        "-metadata".to_string(), format!("artist={}", artist),
+        "-metadata".to_string(), format!("album={}", album),
+        "-metadata".to_string(), format!("date={}", year),
+    ]);
+
+    if !lyrics_lrc.is_empty() {
+        ffmpeg_args.extend([
+            "-metadata".to_string(), format!("lyrics={}", lyrics_lrc),
+        ]);
+    }
+
+    ffmpeg_args.push(out.to_string_lossy().to_string());
+
+    let args_ref: Vec<&str> = ffmpeg_args.iter().map(|s| s.as_str()).collect();
+    sidecar::run_sidecar(&app, "ffmpeg", &args_ref, None).await?;
+
+    emit_progress(&app, "embedding", 100.0);
+
+    // Cleanup temp files
+    let _ = std::fs::remove_file(&tmp_audio);
+    let _ = std::fs::remove_file(&tmp_cover);
+    let _ = std::fs::remove_file(&tmp_lrc);
+
+    let out_str = out.to_string_lossy().to_string();
+
+    let db = app.state::<DbConn>();
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    db::insert(
+        &conn,
+        &DownloadRecord {
+            id: uuid::Uuid::new_v4().to_string(),
+            url: url.clone(),
+            title: title.clone(),
+            author: Some(artist.clone()),
+            thumbnail_url: thumbnail,
+            format: "library-ready".to_string(),
+            file_path: out_str.clone(),
+            created_at: now_ts(),
+        },
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(out_str)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sanitize_title() {
+        assert_eq!(sanitize("My Song: The Best! (2024)"), "My Song_ The Best_ _2024_");
+    }
+}

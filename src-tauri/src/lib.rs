@@ -29,6 +29,7 @@ pub fn run() {
             commands::download::download_audio,
             commands::download::download_tiktok,
             commands::download::download_twitch,
+            commands::library_ready::download_library_ready,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
