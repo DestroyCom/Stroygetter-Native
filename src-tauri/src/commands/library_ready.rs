@@ -1,3 +1,4 @@
+use crate::commands::download::get_sidecar_exe;
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
 use serde::Serialize;
@@ -67,17 +68,17 @@ pub async fn download_library_ready(
         }
     });
 
-    sidecar::run_sidecar(
-        &app,
-        "yt-dlp",
-        &[
-            "-x", "--audio-format", "mp3", "--audio-quality", "192K",
-            "-o", &tmp_audio.to_string_lossy(),
-            &url,
-        ],
-        Some(tx),
-    )
-    .await?;
+    let ffmpeg_opt = get_sidecar_exe("ffmpeg");
+    let tmp_audio_str = tmp_audio.to_string_lossy().to_string();
+    let mut ytdlp_args: Vec<&str> = vec![
+        "-x", "--audio-format", "mp3", "--audio-quality", "192K",
+    ];
+    if let Some(ref ffmpeg) = ffmpeg_opt {
+        ytdlp_args.extend(["--ffmpeg-location", ffmpeg.as_str()]);
+    }
+    ytdlp_args.extend(["-o", &tmp_audio_str, &url]);
+
+    sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args, Some(tx)).await?;
 
     // Phase 2: download cover image
     emit_progress(&app, "fetching_cover", 0.0);

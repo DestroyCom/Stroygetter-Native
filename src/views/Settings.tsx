@@ -2,6 +2,7 @@ import { useState } from "react";
 import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { SUPPORTED_LANGS } from "@/lib/i18n";
 
 export function Settings() {
@@ -78,12 +79,55 @@ export function Settings() {
       </section>
 
       {/* App version */}
-      <section>
+      <section className="mb-8">
         <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/40">
           {t("settings.version", "Version")}
         </h2>
         <p className="text-sm text-white/50">StroyGetter Native — 0.1.0</p>
         <p className="text-xs text-white/25 mt-1">Tauri v2 · React 18 · Vite 5</p>
+        <button
+          type="button"
+          onClick={() => openUrl("https://github.com/DestroyCom/StroyGetter/releases")}
+          className="mt-3 rounded-xl border border-white/10 bg-white/6 px-4 py-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white"
+        >
+          {t("settings.checkUpdates", "Vérifier les mises à jour")}
+        </button>
+      </section>
+
+      {/* About */}
+      <section>
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/40">
+          {t("settings.about", "À propos")}
+        </h2>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => openUrl("https://stroygetter.fr")}
+            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/4 px-4 py-3 text-sm text-white/70 transition-colors hover:border-white/20 hover:text-white"
+          >
+            <span>stroygetter.fr</span>
+            <span className="text-xs text-white/30">↗</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => openUrl("https://github.com/DestroyCom/StroyGetter")}
+            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/4 px-4 py-3 text-sm text-white/70 transition-colors hover:border-white/20 hover:text-white"
+          >
+            <span>GitHub — DestroyCom/StroyGetter</span>
+            <span className="text-xs text-white/30">↗</span>
+          </button>
+          <p className="pt-2 text-xs leading-relaxed text-white/25">
+            StroyGetter Native est le client bureau de StroyGetter, développé par{" "}
+            <button
+              type="button"
+              className="underline decoration-white/20 hover:text-white/50"
+              onClick={() => openUrl("https://portfolio.stroyco.eu")}
+            >
+              StroyCo
+            </button>
+            . L'application utilise yt-dlp et ffmpeg pour le téléchargement et la conversion.
+          </p>
+        </div>
       </section>
     </div>
   );

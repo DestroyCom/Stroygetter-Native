@@ -39,7 +39,12 @@ pub async fn run_sidecar(
                 stdout.push('\n');
             }
             CommandEvent::Stderr(line) => {
-                stderr.push_str(&String::from_utf8_lossy(&line));
+                let text = String::from_utf8_lossy(&line).to_string();
+                eprint!("[{name}] {text}");
+                if let Some(tx) = &progress_tx {
+                    let _ = tx.send(text.clone()).await;
+                }
+                stderr.push_str(&text);
                 stderr.push('\n');
             }
             CommandEvent::Error(e) => return Err(e),

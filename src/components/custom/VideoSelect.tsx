@@ -154,7 +154,10 @@ export function VideoSelect({ info, onDownload, isDownloading, progress, downloa
           {/* Download button / progress */}
           {isDownloading ? (
             <div className="flex flex-col gap-3">
-              <Progress value={progress} className="h-2" />
+              <div className="flex items-center gap-3">
+                <Progress value={progress} className="h-2 flex-1" />
+                <span className="w-10 text-right font-mono text-xs text-white/55">{Math.round(progress)}%</span>
+              </div>
               <p className="text-center text-xs italic text-white/55">
                 {progress < 100 ? t("videoSelect.converting") : t("videoSelect.saving")}
               </p>

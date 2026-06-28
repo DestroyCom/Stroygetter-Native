@@ -31,6 +31,31 @@ fn sanitize(title: &str) -> String {
         .to_string()
 }
 
+/// Returns the path to a Tauri sidecar binary (e.g. "ffmpeg") on disk.
+/// Tauri names sidecars with the target triple suffix (e.g. "ffmpeg-aarch64-apple-darwin").
+pub fn get_sidecar_exe(name: &str) -> Option<String> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?;
+    let os_part = match std::env::consts::OS {
+        "macos"   => "apple-darwin",
+        "linux"   => "unknown-linux-gnu",
+        "windows" => "pc-windows-msvc",
+        other     => other,
+    };
+    let triple = format!("{}-{}", std::env::consts::ARCH, os_part);
+    #[cfg(target_os = "windows")]
+    let candidates = [
+        dir.join(format!("{name}-{triple}.exe")),
+        dir.join(format!("{name}.exe")),
+    ];
+    #[cfg(not(target_os = "windows"))]
+    let candidates = [
+        dir.join(format!("{name}-{triple}")),
+        dir.join(name),
+    ];
+    candidates.into_iter().find(|p| p.exists()).map(|p| p.to_string_lossy().to_string())
+}
+
 fn parse_percent(line: &str) -> Option<f64> {
     // yt-dlp outputs: [download]  42.5% of ...
     if line.contains("[download]") {
@@ -98,12 +123,17 @@ pub async fn download_video(
     let out = downloads_dir().join(format!("{}.mp4", safe));
     let out_str = out.to_string_lossy().to_string();
 
-    let args = vec![
-        "-f".to_string(), itag.clone(),
+    // YouTube video format IDs are video-only; pair with best audio so yt-dlp can mux them.
+    let format_str = format!("{}+bestaudio[ext=m4a]/{}+bestaudio", itag, itag);
+    let mut args = vec![
+        "-f".to_string(), format_str,
         "--merge-output-format".to_string(), "mp4".to_string(),
-        "-o".to_string(), out_str.clone(),
-        url.clone(),
     ];
+    if let Some(ffmpeg) = get_sidecar_exe("ffmpeg") {
+        args.push("--ffmpeg-location".to_string());
+        args.push(ffmpeg);
+    }
+    args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
     run_with_progress(&app, "yt-dlp", args, "downloading").await?;
 
@@ -127,13 +157,16 @@ pub async fn download_audio(
     let out = downloads_dir().join(format!("{}.mp3", safe));
     let out_str = out.to_string_lossy().to_string();
 
-    let args = vec![
+    let mut args = vec![
         "-x".to_string(),
         "--audio-format".to_string(), "mp3".to_string(),
         "--audio-quality".to_string(), "192K".to_string(),
-        "-o".to_string(), out_str.clone(),
-        url.clone(),
     ];
+    if let Some(ffmpeg) = get_sidecar_exe("ffmpeg") {
+        args.push("--ffmpeg-location".to_string());
+        args.push(ffmpeg);
+    }
+    args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
     run_with_progress(&app, "yt-dlp", args, "downloading").await?;
 
@@ -201,6 +234,10 @@ pub async fn download_twitch(
     let mut args = vec![];
     if is_audio {
         args.extend(["-x".to_string(), "--audio-format".to_string(), "mp3".to_string()]);
+        if let Some(ffmpeg) = get_sidecar_exe("ffmpeg") {
+            args.push("--ffmpeg-location".to_string());
+            args.push(ffmpeg);
+        }
     } else {
         args.extend(["-f".to_string(), format_id.clone()]);
     }
