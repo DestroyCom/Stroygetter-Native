@@ -43,9 +43,12 @@ A valid attestation confirms the file was produced by this repo's Actions workfl
 Download the `.asc` file alongside the installer from the release page.
 
 ```bash
-# Import the public key (one-time setup)
-gpg --keyserver keys.openpgp.org --recv-keys <KEY_ID>
-# Or: curl https://github.com/DestroyCom.gpg | gpg --import
+# Import the public key (one-time setup) — pick any of these:
+curl https://github.com/DestroyCom.gpg | gpg --import
+# or from the repo:
+curl https://raw.githubusercontent.com/DestroyCom/Stroygetter-Native/main/docs/stroygetter-releases.asc | gpg --import
+# or from keyserver (after upload):
+gpg --keyserver keys.openpgp.org --recv-keys 6C1D622641F44493
 
 # Verify the signature
 gpg --verify StroyGetter.dmg.asc StroyGetter.dmg
@@ -65,15 +68,14 @@ gpg --full-generate-key
 # Name: StroyGetter Releases
 # Email: your-email@example.com
 
-# Get the key ID (the long hex after "sec")
-gpg --list-secret-keys --keyid-format LONG
+# Key ID: 6C1D622641F44493
 
 # Export private key (base64 — goes into GitHub secret GPG_PRIVATE_KEY)
-gpg --export-secret-keys --armor <KEY_ID> | base64
+gpg --export-secret-keys --armor 6C1D622641F44493 | base64
 
-# Export public key (publish this so users can verify)
-gpg --export --armor <KEY_ID>
-# → upload to keys.openpgp.org and/or commit as docs/stroygetter-releases.asc
+# Public key is committed at docs/stroygetter-releases.asc
+# Also upload to keyserver:
+gpg --keyserver keys.openpgp.org --send-keys 6C1D622641F44493
 ```
 
 ### GitHub secrets to configure
