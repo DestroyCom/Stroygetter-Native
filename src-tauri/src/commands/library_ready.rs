@@ -71,6 +71,7 @@ pub async fn download_library_ready(
     let ffmpeg_opt = get_sidecar_exe("ffmpeg");
     let tmp_audio_str = tmp_audio.to_string_lossy().to_string();
     let mut ytdlp_args: Vec<&str> = vec![
+        "--extractor-args", "youtube:player_client=android,web",
         "-x", "--audio-format", "mp3", "--audio-quality", "192K",
     ];
     if let Some(ref ffmpeg) = ffmpeg_opt {

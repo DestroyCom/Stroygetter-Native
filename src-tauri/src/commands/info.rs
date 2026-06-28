@@ -96,7 +96,12 @@ fn parse_twitch_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
 
 #[tauri::command]
 pub async fn fetch_video_info(app: AppHandle, url: String) -> Result<VideoInfo, String> {
-    let output = sidecar::run_sidecar(&app, "yt-dlp", &["--dump-json", "--no-playlist", &url], None).await?;
+    let output = sidecar::run_sidecar(
+        &app,
+        "yt-dlp",
+        &["--dump-json", "--no-playlist", "--extractor-args", "youtube:player_client=android,web", &url],
+        None,
+    ).await?;
 
     let info: YtDlpInfo = serde_json::from_str(output.stdout.trim())
         .map_err(|e| format!("failed to parse yt-dlp output: {}", e))?;

@@ -93,7 +93,15 @@ async fn run_with_progress(
         }
     });
 
-    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    // YouTube player_client arg is scoped to the youtube extractor; ignored for TikTok/Twitch.
+    // Prevents "No JS runtime" warnings introduced in yt-dlp ≥ 2025.x.
+    let mut all_args: Vec<String> = vec![
+        "--extractor-args".to_string(),
+        "youtube:player_client=android,web".to_string(),
+    ];
+    all_args.extend(args);
+
+    let args_ref: Vec<&str> = all_args.iter().map(|s| s.as_str()).collect();
     sidecar::run_sidecar(app, sidecar_name, &args_ref, Some(tx)).await
 }
 
