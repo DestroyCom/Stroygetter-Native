@@ -49,7 +49,11 @@ pub(crate) fn parse_lrc_line(line: &str) -> Option<(u32, String)> {
 
 #[tauri::command]
 pub async fn read_audio_metadata(path: String) -> Result<AudioMetadata, String> {
-    let tag = Tag::read_from_path(&path).unwrap_or_else(|_| Tag::new());
+    let tag = match Tag::read_from_path(&path) {
+        Ok(t) => t,
+        Err(e) if matches!(e.kind, id3::ErrorKind::NoTag) => Tag::new(),
+        Err(e) => return Err(e.to_string()),
+    };
 
     let title = tag.title().map(|s| s.to_string());
     let artist = tag.artist().map(|s| s.to_string());
