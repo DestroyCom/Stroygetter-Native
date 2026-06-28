@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use crate::commands::settings::{build_common_args, DownloadSettingsState};
 use crate::sidecar;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FormatEntry {
@@ -93,13 +94,16 @@ fn parse_twitch_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
 }
 
 #[tauri::command]
-pub async fn fetch_video_info(app: AppHandle, url: String) -> Result<VideoInfo, String> {
-    let output = sidecar::run_sidecar(
-        &app,
-        "yt-dlp",
-        &["--dump-json", "--no-playlist", "--extractor-args", "youtube:player_client=android,web", &url],
-        None,
-    ).await?;
+pub async fn fetch_video_info(
+    app: AppHandle,
+    dl_settings: State<'_, DownloadSettingsState>,
+    url: String,
+) -> Result<VideoInfo, String> {
+    let settings = dl_settings.0.lock().unwrap().clone();
+    let mut args = build_common_args(&settings);
+    args.extend(["--dump-json".to_string(), "--no-playlist".to_string(), url.clone()]);
+    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    let output = sidecar::run_sidecar(&app, "yt-dlp", &args_ref, None).await?;
 
     let info: YtDlpInfo = serde_json::from_str(output.stdout.trim())
         .map_err(|e| format!("failed to parse yt-dlp output: {}", e))?;

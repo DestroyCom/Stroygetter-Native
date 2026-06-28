@@ -1,15 +1,52 @@
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import i18n from "i18next";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { detectAvailableBrowsers, updateDownloadSettings } from "@/lib/commands";
 import { SUPPORTED_LANGS } from "@/lib/i18n";
+import { loadDownloadSettings, saveDownloadSettings } from "@/lib/settings";
+
+const BROWSER_LABELS: Record<string, string> = {
+  safari: "Safari",
+  chrome: "Google Chrome",
+  firefox: "Mozilla Firefox",
+  edge: "Microsoft Edge",
+  brave: "Brave",
+  arc: "Arc",
+  opera: "Opera",
+  chromium: "Chromium",
+};
 
 export function Settings() {
   const { t } = useTranslation();
   const [downloadDir, setDownloadDir] = useState<string>(
     localStorage.getItem("stroygetter-download-dir") ?? ""
   );
+
+  const initial = loadDownloadSettings();
+  const [useCookies, setUseCookies] = useState(initial.useCookies);
+  const [cookiesBrowser, setCookiesBrowser] = useState(initial.cookiesBrowser);
+  const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
+
+  useEffect(() => {
+    detectAvailableBrowsers().then((browsers) => {
+      setAvailableBrowsers(browsers);
+      setCookiesBrowser((prev) => (browsers.length > 0 && !browsers.includes(prev) ? browsers[0] : prev));
+    });
+  }, []);
+
+  const handleCookiesToggle = (enabled: boolean) => {
+    setUseCookies(enabled);
+    const saved = saveDownloadSettings({ useCookies: enabled, cookiesBrowser });
+    updateDownloadSettings(saved);
+  };
+
+  const handleBrowserChange = (browser: string) => {
+    setCookiesBrowser(browser);
+    const saved = saveDownloadSettings({ useCookies, cookiesBrowser: browser });
+    updateDownloadSettings(saved);
+  };
 
   const handleLangChange = (code: string) => {
     i18n.changeLanguage(code);
@@ -75,6 +112,85 @@ export function Settings() {
           <p className="text-xs text-white/35">
             {t("settings.defaultFolder", "Par défaut : dossier Téléchargements du système.")}
           </p>
+        </div>
+      </section>
+
+      {/* Cookies */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/40">
+          {t("settings.performance", "Performance")}
+        </h2>
+        <div className="flex flex-col gap-3">
+          <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/4 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-white">
+                {t("settings.useCookies", "Utiliser les cookies du navigateur")}
+              </p>
+              <p className="mt-0.5 text-xs text-white/35">
+                {t("settings.useCookiesDesc", "Réduit le throttling YouTube. Cookies lus localement, jamais transmis ailleurs.")}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useCookies ? "true" : "false"}
+              aria-label={t("settings.useCookies", "Utiliser les cookies du navigateur")}
+              onClick={() => handleCookiesToggle(!useCookies)}
+              className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
+                useCookies ? "bg-stroy-500" : "bg-white/15"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  useCookies ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </label>
+
+          {useCookies && availableBrowsers.length > 0 && (
+            <div className="flex flex-col gap-2 pl-1">
+              <p className="text-xs font-medium text-white/50">
+                {t("settings.browserSource", "Navigateur source")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {availableBrowsers.map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => handleBrowserChange(b)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      cookiesBrowser === b
+                        ? "border-stroy-500 bg-stroy-500/20 text-white"
+                        : "border-white/10 bg-white/4 text-white/60 hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    {BROWSER_LABELS[b] ?? b}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {useCookies && availableBrowsers.length === 0 && (
+            <p className="text-xs text-white/35 pl-1">
+              {t("settings.noBrowserFound", "Aucun navigateur compatible détecté.")}
+            </p>
+          )}
+
+          {useCookies && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3">
+              <p className="text-xs font-semibold text-amber-400 mb-1">
+                ⚠ {t("settings.cookiesWarningTitle", "Option avancée — dernier recours")}
+              </p>
+              <p className="text-xs leading-relaxed text-amber-300/70">
+                {t(
+                  "settings.cookiesWarningBody",
+                  "Cette option lit les cookies de session de votre navigateur pour contourner les restrictions YouTube. Elle ne doit être activée qu'en cas de problèmes persistants de téléchargement. L'utilisation se fait à vos risques et périls. Les développeurs de StroyGetter ne peuvent être tenus responsables d'une suspension de compte ou de tout autre conséquence liée à l'activation de cette option."
+                )}
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

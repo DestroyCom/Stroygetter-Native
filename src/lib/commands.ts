@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { DownloadSettings } from "./settings";
 import type { VideoInfo, DownloadRecord, DownloadProgress } from "./types";
 
 export const fetchVideoInfo = (url: string): Promise<VideoInfo> =>
@@ -53,3 +54,15 @@ export const downloadLibraryReady = (params: {
 
 export const onDownloadProgress = (cb: (p: DownloadProgress) => void) =>
   listen<DownloadProgress>("download://progress", (e) => cb(e.payload));
+
+export const detectAvailableBrowsers = (): Promise<string[]> =>
+  invoke("detect_available_browsers");
+
+export const updateDownloadSettings = (settings: DownloadSettings): Promise<void> =>
+  invoke("update_download_settings", {
+    useCookies: settings.useCookies,
+    cookiesBrowser: settings.cookiesBrowser,
+  });
+
+export const getDownloadSettings = (): Promise<DownloadSettings> =>
+  invoke("get_download_settings");

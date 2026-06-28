@@ -1,9 +1,10 @@
 use crate::commands::download::get_sidecar_exe;
+use crate::commands::settings::{build_common_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::mpsc;
 
 #[derive(Serialize, Clone)]
@@ -47,6 +48,7 @@ async fn try_fetch_cover(url: &str) -> Option<Vec<u8>> {
 #[tauri::command]
 pub async fn download_library_ready(
     app: AppHandle,
+    dl_settings: State<'_, DownloadSettingsState>,
     url: String,
     title: String,
     artist: String,
@@ -57,6 +59,7 @@ pub async fn download_library_ready(
     lyrics_lrc: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
+    let settings = dl_settings.0.lock().unwrap().clone();
     let safe = sanitize(&title);
     let tmp_audio = std::env::temp_dir().join(format!("{}_audio.mp3", safe));
     let tmp_cover = std::env::temp_dir().join(format!("{}_cover.jpg", safe));
@@ -87,16 +90,19 @@ pub async fn download_library_ready(
 
     let ffmpeg_opt = get_sidecar_exe("ffmpeg");
     let tmp_audio_str = tmp_audio.to_string_lossy().to_string();
-    let mut ytdlp_args: Vec<&str> = vec![
-        "--extractor-args", "youtube:player_client=android,web",
-        "-x", "--audio-format", "mp3", "--audio-quality", "192K",
-    ];
-    if let Some(ref ffmpeg) = ffmpeg_opt {
-        ytdlp_args.extend(["--ffmpeg-location", ffmpeg.as_str()]);
-    }
-    ytdlp_args.extend(["-o", &tmp_audio_str, &url]);
 
-    sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args, Some(tx)).await?;
+    let mut ytdlp_args = build_common_args(&settings);
+    ytdlp_args.extend([
+        "-x".to_string(), "--audio-format".to_string(), "mp3".to_string(),
+        "--audio-quality".to_string(), "192K".to_string(),
+    ]);
+    if let Some(ref ffmpeg) = ffmpeg_opt {
+        ytdlp_args.extend(["--ffmpeg-location".to_string(), ffmpeg.clone()]);
+    }
+    ytdlp_args.extend(["-o".to_string(), tmp_audio_str.clone(), url.clone()]);
+
+    let ytdlp_args_ref: Vec<&str> = ytdlp_args.iter().map(|s| s.as_str()).collect();
+    sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args_ref, Some(tx)).await?;
 
     // Phase 2: download cover image — try primary URL, fall back, proceed without on failure
     emit_progress(&app, "fetching_cover", 0.0);

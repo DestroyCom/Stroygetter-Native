@@ -1,8 +1,9 @@
+use crate::commands::settings::{build_common_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::mpsc;
 
 #[derive(Serialize, Clone)]
@@ -74,14 +75,12 @@ async fn run_with_progress(
     sidecar_name: &str,
     args: Vec<String>,
     phase: &str,
+    dl_settings: &crate::commands::settings::DownloadSettings,
 ) -> Result<sidecar::SidecarOutput, String> {
-    let app_clone = app.clone();
-    let phase_str = phase.to_string();
-
     let (tx, mut rx) = mpsc::channel::<String>(100);
 
-    let app_emit = app_clone.clone();
-    let phase_emit = phase_str.clone();
+    let app_emit = app.clone();
+    let phase_emit = phase.to_string();
     tokio::spawn(async move {
         while let Some(line) = rx.recv().await {
             if let Some(pct) = parse_percent(&line) {
@@ -93,12 +92,8 @@ async fn run_with_progress(
         }
     });
 
-    // YouTube player_client arg is scoped to the youtube extractor; ignored for TikTok/Twitch.
-    // Prevents "No JS runtime" warnings introduced in yt-dlp ≥ 2025.x.
-    let mut all_args: Vec<String> = vec![
-        "--extractor-args".to_string(),
-        "youtube:player_client=android,web".to_string(),
-    ];
+    // Prepend common args (player_client + optional cookies).
+    let mut all_args = build_common_args(dl_settings);
     all_args.extend(args);
 
     let args_ref: Vec<&str> = all_args.iter().map(|s| s.as_str()).collect();
@@ -121,17 +116,18 @@ fn record_from(url: &str, title: &str, author: &str, thumbnail: Option<&str>, fm
 #[tauri::command]
 pub async fn download_video(
     app: AppHandle,
+    dl_settings: State<'_, DownloadSettingsState>,
     url: String,
     itag: String,
     title: String,
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
+    let settings = dl_settings.0.lock().unwrap().clone();
     let safe = sanitize(&title);
     let out = downloads_dir().join(format!("{}.mp4", safe));
     let out_str = out.to_string_lossy().to_string();
 
-    // YouTube video format IDs are video-only; pair with best audio so yt-dlp can mux them.
     let format_str = format!("{}+bestaudio[ext=m4a]/{}+bestaudio", itag, itag);
     let mut args = vec![
         "-f".to_string(), format_str,
@@ -143,7 +139,7 @@ pub async fn download_video(
     }
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading").await?;
+    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
 
     let db = app.state::<DbConn>();
     let conn = db.0.lock().map_err(|e| e.to_string())?;
@@ -156,11 +152,13 @@ pub async fn download_video(
 #[tauri::command]
 pub async fn download_audio(
     app: AppHandle,
+    dl_settings: State<'_, DownloadSettingsState>,
     url: String,
     title: String,
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
+    let settings = dl_settings.0.lock().unwrap().clone();
     let safe = sanitize(&title);
     let out = downloads_dir().join(format!("{}.mp3", safe));
     let out_str = out.to_string_lossy().to_string();
@@ -176,7 +174,7 @@ pub async fn download_audio(
     }
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading").await?;
+    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
 
     let db = app.state::<DbConn>();
     let conn = db.0.lock().map_err(|e| e.to_string())?;
@@ -189,6 +187,7 @@ pub async fn download_audio(
 #[tauri::command]
 pub async fn download_tiktok(
     app: AppHandle,
+    dl_settings: State<'_, DownloadSettingsState>,
     url: String,
     watermark: bool,
     audio_only: bool,
@@ -196,6 +195,7 @@ pub async fn download_tiktok(
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
+    let settings = dl_settings.0.lock().unwrap().clone();
     let safe = sanitize(&title);
     let ext = if audio_only { "mp3" } else { "mp4" };
     let out = downloads_dir().join(format!("{}.{}", safe, ext));
@@ -206,14 +206,12 @@ pub async fn download_tiktok(
     if audio_only {
         args.extend(["-x".to_string(), "--audio-format".to_string(), "mp3".to_string()]);
     } else if !watermark {
-        // no-watermark: select the format without the TikTok watermark overlay
         args.extend(["-f".to_string(), "download_addr-0".to_string()]);
     }
-    // watermark = default yt-dlp selection
 
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading").await?;
+    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
 
     let fmt = if audio_only { "tiktok-audio" } else if watermark { "tiktok-watermark" } else { "tiktok-no-watermark" };
     let db = app.state::<DbConn>();
@@ -227,12 +225,14 @@ pub async fn download_tiktok(
 #[tauri::command]
 pub async fn download_twitch(
     app: AppHandle,
+    dl_settings: State<'_, DownloadSettingsState>,
     url: String,
     format_id: String,
     title: String,
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
+    let settings = dl_settings.0.lock().unwrap().clone();
     let safe = sanitize(&title);
     let is_audio = format_id == "audio";
     let ext = if is_audio { "mp3" } else { "mp4" };
@@ -251,7 +251,7 @@ pub async fn download_twitch(
     }
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading").await?;
+    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
 
     let fmt = if is_audio { "twitch-audio" } else { "twitch-video" };
     let db = app.state::<DbConn>();

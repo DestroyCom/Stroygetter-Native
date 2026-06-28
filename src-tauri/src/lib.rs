@@ -1,7 +1,8 @@
+mod commands;
 mod db;
 mod sidecar;
-mod commands;
 
+use commands::settings::DownloadSettingsState;
 use db::DbConn;
 use tauri::Manager;
 
@@ -23,6 +24,9 @@ pub fn run() {
                 .unwrap_or_else(|_| std::path::PathBuf::from("."));
             let conn = db::open_or_memory(&app_data_dir);
             app.manage(DbConn(std::sync::Mutex::new(conn)));
+            app.manage(DownloadSettingsState(std::sync::Mutex::new(
+                commands::settings::DownloadSettings::default(),
+            )));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -33,6 +37,9 @@ pub fn run() {
             commands::download::download_tiktok,
             commands::download::download_twitch,
             commands::library_ready::download_library_ready,
+            commands::settings::detect_available_browsers,
+            commands::settings::update_download_settings,
+            commands::settings::get_download_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
