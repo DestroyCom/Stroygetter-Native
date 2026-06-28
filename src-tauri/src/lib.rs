@@ -37,6 +37,8 @@ pub fn run() {
             commands::download::download_tiktok,
             commands::download::download_twitch,
             commands::library_ready::download_library_ready,
+            commands::metadata_editor::read_audio_metadata,
+            commands::metadata_editor::write_audio_metadata,
             commands::settings::detect_available_browsers,
             commands::settings::update_download_settings,
             commands::settings::get_download_settings,
