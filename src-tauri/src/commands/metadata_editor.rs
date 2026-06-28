@@ -87,18 +87,26 @@ pub async fn read_audio_metadata(path: String) -> Result<AudioMetadata, String> 
     Ok(AudioMetadata { title, artist, album, year, cover_base64, lyrics_plain, lyrics_lrc })
 }
 
-async fn fetch_cover_bytes(url: &str) -> Option<Vec<u8>> {
-    let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(5))
+async fn fetch_cover_bytes(url: &str) -> Option<(Vec<u8>, String)> {
+    let res = reqwest::Client::new()
+        .get(url)
         .timeout(std::time::Duration::from_secs(20))
-        .build()
+        .send()
+        .await
         .ok()?;
-    let res = client.get(url).send().await.ok()?;
     if !res.status().is_success() {
         return None;
     }
+    let mime = res
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(';').next())
+        .filter(|s| s.starts_with("image/"))
+        .unwrap_or("image/jpeg")
+        .to_string();
     let bytes = res.bytes().await.ok()?;
-    if bytes.is_empty() { None } else { Some(bytes.to_vec()) }
+    if bytes.is_empty() { None } else { Some((bytes.to_vec(), mime)) }
 }
 
 #[tauri::command]
@@ -123,10 +131,10 @@ pub async fn write_audio_metadata(
 
     // Cover: only replace if a new URL was provided
     if let Some(ref url) = cover_url {
-        if let Some(bytes) = fetch_cover_bytes(url).await {
+        if let Some((bytes, mime)) = fetch_cover_bytes(url).await {
             tag.remove_picture_by_type(PictureType::CoverFront);
             tag.add_frame(Picture {
-                mime_type: "image/jpeg".to_string(),
+                mime_type: mime,
                 picture_type: PictureType::CoverFront,
                 description: "Cover".to_string(),
                 data: bytes,
