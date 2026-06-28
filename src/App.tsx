@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/custom/BottomNav";
 import { Home } from "@/views/Home";
 import { Fetch } from "@/views/Fetch";
 import { Settings } from "@/views/Settings";
+import { MetadataEditor } from "@/views/MetadataEditor";
 import { checkForUpdate, RELEASES_PAGE } from "@/lib/updater";
 
 function UpdateBanner({ version, url, onDismiss }: { version: string; url: string; onDismiss: () => void }) {
@@ -78,6 +79,7 @@ export function App() {
               <Route path="/" element={<Home />} />
               <Route path="/fetch" element={<Fetch />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/metadata-editor" element={<MetadataEditor />} />
             </Routes>
           </main>
 

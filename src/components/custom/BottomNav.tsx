@@ -1,10 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Clock, Settings } from "lucide-react";
+import { Home, Clock, Settings, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { path: "/", icon: Home, label: "Accueil" },
   { path: "/", icon: Clock, label: "Historique" },
+  { path: "/metadata-editor", icon: Tag, label: "Metadata" },
   { path: "/settings", icon: Settings, label: "Paramètres" },
 ];
 
