@@ -54,7 +54,7 @@ src/
   components/
     ui/            composants shadcn (accordion, progress, select, separator, skeleton)
     custom/        GetterInput, VideoSelect, VideoLoading, Sidebar, BottomNav
-  views/           Home.tsx, Fetch.tsx, Settings.tsx
+  views/           Home.tsx, Fetch.tsx, Settings.tsx, MetadataEditor.tsx
   lib/
     types.ts       VideoInfo, DownloadRecord, DownloadFormat, DownloadProgress
     commands.ts    wrappers invoke() vers tous les Tauri commands
@@ -102,6 +102,14 @@ Frontend (React/Vite)
 
   └─ invoke("get_history")
        └─ src-tauri/src/db.rs → table downloads
+
+  └─ invoke("read_audio_metadata", { path })
+       └─ src-tauri/src/commands/metadata_editor.rs
+            └─ lire les tags ID3 (id3 crate) → AudioMetadata struct
+
+  └─ invoke("write_audio_metadata", { path, title, artist, album, year, coverUrl?, lyricsPlain, lyricsLrc })
+       └─ src-tauri/src/commands/metadata_editor.rs
+            └─ écrire tags ID3 (USLT, SYLT, APIC) via id3 crate
 ```
 
 Chaque action utilisateur passe par un **Tauri command** en Rust.
@@ -230,6 +238,7 @@ export interface DownloadProgress {
 | Élément | Fichier | Statut |
 |---------|---------|--------|
 | `fetchYouTubeMusicMetadata` | `src/lib/metadata.ts` | Stub — à porter depuis le web (`youtubei.js` → yt-dlp) |
+| `searchItunesCover` | `src/lib/metadata.ts` | Exportée publiquement — retourne jusqu'à 5 résultats |
 | `downloadDir` personnalisé | `src/views/Settings.tsx` | UI uniquement, non passé aux commands Rust |
 | Refresh sidebar après download | `src/components/custom/Sidebar.tsx` | Event-based partiel — pas systématique sur tous les paths |
 | Version hardcodée | `src/views/Settings.tsx` | Lire depuis `tauri.conf.json` dynamiquement |
