@@ -54,18 +54,32 @@ fn detect_source(url: &str) -> &'static str {
 }
 
 fn parse_youtube_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
-    formats
+    let mut seen = std::collections::HashSet::new();
+    let mut result = formats
         .iter()
         .filter(|f| {
             f.vcodec.as_deref() != Some("none")
                 && f.height.map(|h| h >= 360).unwrap_or(false)
         })
-        .map(|f| FormatEntry {
-            itag: f.format_id.clone(),
-            format_id: None,
-            quality_label: f.height.map(|h| format!("{}p", h)),
+        .filter_map(|f| {
+            let h = f.height?;
+            if seen.insert(h) {
+                Some(FormatEntry {
+                    itag: f.format_id.clone(),
+                    format_id: None,
+                    quality_label: Some(format!("{}p", h)),
+                })
+            } else {
+                None
+            }
         })
-        .collect()
+        .collect::<Vec<_>>();
+    result.sort_by(|a, b| {
+        let ha: u32 = a.quality_label.as_deref().unwrap_or("0").trim_end_matches('p').parse().unwrap_or(0);
+        let hb: u32 = b.quality_label.as_deref().unwrap_or("0").trim_end_matches('p').parse().unwrap_or(0);
+        hb.cmp(&ha)
+    });
+    result
 }
 
 fn parse_twitch_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
