@@ -150,8 +150,8 @@ mod tests {
     #[test]
     fn parse_youtube_formats_filters_audio_only() {
         let formats = vec![
-            YtDlpFormat { format_id: Some("137".to_string()), height: Some(1080), vcodec: Some("avc1".to_string()), acodec: Some("none".to_string()), format_note: None },
-            YtDlpFormat { format_id: Some("140".to_string()), height: None, vcodec: Some("none".to_string()), acodec: Some("mp4a".to_string()), format_note: None },
+            YtDlpFormat { format_id: Some("137".to_string()), height: Some(1080), vcodec: Some("avc1".to_string()), format_note: None },
+            YtDlpFormat { format_id: Some("140".to_string()), height: None, vcodec: Some("none".to_string()), format_note: None },
         ];
         let result = parse_youtube_formats(&formats);
         assert_eq!(result.len(), 1);

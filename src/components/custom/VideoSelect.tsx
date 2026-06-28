@@ -54,6 +54,7 @@ export function VideoSelect({ info, onDownload, isDownloading, progress, downloa
             <img
               src={info.thumbnail}
               alt={t("videoSelect.thumbnailAlt", { title: info.title })}
+              referrerPolicy="no-referrer"
               className="relative z-10 h-full w-full object-cover"
             />
           ) : (

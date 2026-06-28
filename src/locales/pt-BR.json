@@ -195,7 +195,7 @@
     "errorDownload": "Ocorreu um erro durante o download. Por favor, tente novamente.",
     "errorFetch": "Ocorreu um erro ao obter informações do vídeo.",
     "errorAgeRestricted": "O StroyGetter ainda não suporta vídeos privados ou com restrição de idade.",
-    "thumbnailAlt": "Miniatura de {title}",
+    "thumbnailAlt": "Miniatura de {{title}}",
     "eduCard1Title": "O que é Library Ready?",
     "eduCard1Desc": "MP3 com capa do álbum, tags ID3 (título, artista, álbum, ano) e letras sincronizadas embutidas. Perfeito para o Apple Music ou Plex.",
     "eduCard2Title": "A conversão está demorando?",
@@ -634,5 +634,29 @@
     "faq4A": "Clips do Twitch geralmente oferecem 360p, 480p, 720p60 e 1080p60 (fonte). O seletor de qualidade exibe automaticamente todas as resoluções disponíveis.",
     "githubTitle": "StroyGetter é open source",
     "githubDesc": "Dê uma estrela, reporte problemas ou contribua no GitHub."
+  },
+  "sidebar": {
+    "newDownload": "Novo download",
+    "history": "Histórico",
+    "noDownloads": "Nenhum download",
+    "settings": "Configurações"
+  },
+  "settings": {
+    "title": "Configurações",
+    "language": "Idioma",
+    "downloadFolder": "Pasta de download",
+    "changeFolder": "Alterar pasta",
+    "chooseFolder": "Escolher pasta",
+    "defaultFolder": "Padrão: pasta Downloads do sistema.",
+    "version": "Versão",
+    "checkUpdates": "Verificar atualizações",
+    "about": "Sobre",
+    "performance": "Desempenho",
+    "useCookies": "Usar cookies do navegador",
+    "useCookiesDesc": "Reduz o throttling do YouTube. Os cookies são lidos localmente e nunca transmitidos para outros lugares.",
+    "browserSource": "Navegador de origem",
+    "noBrowserFound": "Nenhum navegador compatível detectado.",
+    "cookiesWarningTitle": "Opção avançada — último recurso",
+    "cookiesWarningBody": "Esta opção lê os cookies de sessão do seu navegador para contornar as restrições do YouTube. Deve ser ativada apenas se você tiver problemas persistentes de download. O uso é por sua conta e risco. Os desenvolvedores do StroyGetter não podem ser responsabilizados por qualquer suspensão de conta ou outras consequências resultantes da ativação desta opção."
   }
 }

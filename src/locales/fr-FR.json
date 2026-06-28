@@ -195,7 +195,7 @@
     "errorDownload": "Une erreur est survenue lors du téléchargement. Veuillez réessayer.",
     "errorFetch": "Impossible de récupérer les informations de la vidéo.",
     "errorAgeRestricted": "StroyGetter ne supporte pas encore les vidéos privées ou soumises à une restriction d'âge.",
-    "thumbnailAlt": "Miniature de {title}",
+    "thumbnailAlt": "Miniature de {{title}}",
     "eduCard1Title": "C'est quoi Library Ready ?",
     "eduCard1Desc": "Un MP3 avec pochette, tags ID3 (titre, artiste, album, année) et paroles synchronisées. Parfait pour Apple Music ou Plex.",
     "eduCard2Title": "La conversion prend du temps ?",
@@ -634,5 +634,29 @@
     "faq4A": "Les clips Twitch proposent généralement 360p, 480p, 720p60 et 1080p60 (source). Le sélecteur de qualité affiche automatiquement toutes les résolutions disponibles.",
     "githubTitle": "StroyGetter est open source",
     "githubDesc": "Mettez une étoile, signalez des problèmes ou contribuez sur GitHub."
+  },
+  "sidebar": {
+    "newDownload": "Nouveau téléchargement",
+    "history": "Historique",
+    "noDownloads": "Aucun téléchargement",
+    "settings": "Paramètres"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "downloadFolder": "Dossier de téléchargement",
+    "changeFolder": "Changer le dossier",
+    "chooseFolder": "Choisir un dossier",
+    "defaultFolder": "Par défaut : dossier Téléchargements du système.",
+    "version": "Version",
+    "checkUpdates": "Vérifier les mises à jour",
+    "about": "À propos",
+    "performance": "Performance",
+    "useCookies": "Utiliser les cookies du navigateur",
+    "useCookiesDesc": "Réduit le throttling YouTube. Cookies lus localement, jamais transmis ailleurs.",
+    "browserSource": "Navigateur source",
+    "noBrowserFound": "Aucun navigateur compatible détecté.",
+    "cookiesWarningTitle": "Option avancée — dernier recours",
+    "cookiesWarningBody": "Cette option lit les cookies de session de votre navigateur pour contourner les restrictions YouTube. Elle ne doit être activée qu'en cas de problèmes persistants de téléchargement. L'utilisation se fait à vos risques et périls. Les développeurs de StroyGetter ne peuvent être tenus responsables d'une suspension de compte ou de tout autre conséquence liée à l'activation de cette option."
   }
 }

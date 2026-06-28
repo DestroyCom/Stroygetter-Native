@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Film, Plus, Settings } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import logoWhite from "@/assets/logo-white.svg";
@@ -8,6 +9,7 @@ import type { DownloadRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [history, setHistory] = useState<DownloadRecord[]>([]);
@@ -32,17 +34,17 @@ export function Sidebar() {
           className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 transition-colors hover:bg-white/6 hover:text-white"
         >
           <Plus size={15} />
-          Nouveau téléchargement
+          {t("sidebar.newDownload", "New download")}
         </button>
       </div>
 
       {/* History */}
       <div className="flex-1 overflow-y-auto px-3 pt-4">
         <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-white/30">
-          Historique
+          {t("sidebar.history", "History")}
         </p>
         {history.length === 0 && (
-          <p className="px-3 text-xs text-white/25">Aucun téléchargement</p>
+          <p className="px-3 text-xs text-white/25">{t("sidebar.noDownloads", "No downloads")}</p>
         )}
         {history.slice(0, 15).map((item) => (
           <button
@@ -74,7 +76,7 @@ export function Sidebar() {
           )}
         >
           <Settings size={15} />
-          Paramètres
+          {t("sidebar.settings", "Settings")}
         </button>
       </div>
     </aside>
