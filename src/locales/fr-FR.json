@@ -51,7 +51,7 @@
   "home": {
     "heroTitle": "Téléchargez vidéos et musique depuis YouTube,\n TikTok & Twitch.",
     "heroSubtitle": "Gratuitement, en ligne, sans inscription.",
-    "heroDesc": "Le téléchargeur open source pour YouTube, TikTok et Twitch. Obtenez une vidéo ou un audio brut, téléchargez TikTok sans filigrane, téléchargez des clips Twitch, ou choisissez <libraryReady>Library Ready</libraryReady> (YouTube) pour un MP3 complet avec pochette, tags ID3 et paroles synchronisées.",
+    "heroDesc": "Le téléchargeur open source pour YouTube, TikTok et Twitch. Obtenez une vidéo ou un audio brut, téléchargez TikTok sans filigrane, téléchargez des clips Twitch, ou choisissez Library Ready (YouTube) pour un MP3 complet avec pochette, tags ID3 et paroles synchronisées.",
     "heroLibraryReady": "Library Ready",
     "heroBadge1": "YouTube, TikTok & Twitch",
     "heroBadge2": "Zéro publicité",
@@ -60,7 +60,7 @@
     "heroDisclaimer": "Veuillez ne télécharger que du contenu dont vous possédez les droits.",
     "ytHeroTitle": "Téléchargez des vidéos YouTube\nen MP4, MP3 ou Library Ready.",
     "ytHeroSubtitle": "Gratuitement, en ligne, sans inscription.",
-    "ytHeroDesc": "Le téléchargeur YouTube open-source. Obtenez un simple fichier vidéo ou audio, ou choisissez <libraryReady>Library Ready</libraryReady> pour un MP3 parfaitement tagué (pochette, tags ID3, paroles synchronisées), prêt pour votre lecteur musical. Sans extension ni application.",
+    "ytHeroDesc": "Le téléchargeur YouTube open-source. Obtenez un simple fichier vidéo ou audio, ou choisissez Library Ready pour un MP3 parfaitement tagué (pochette, tags ID3, paroles synchronisées), prêt pour votre lecteur musical. Sans extension ni application.",
     "ytHeroBadge1": "Téléchargements illimités",
     "ytHeroBadge2": "Zéro publicité",
     "ytHeroBadge3": "Open source",

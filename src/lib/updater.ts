@@ -1,0 +1,41 @@
+// Update check — points to the native app GitHub repo releases.
+// Change RELEASES_URL when the native app gets its own repo/release page.
+const RELEASES_URL = "https://api.github.com/repos/DestroyCom/StroyGetter/releases/latest";
+export const RELEASES_PAGE = "https://github.com/DestroyCom/StroyGetter/releases";
+
+/** Returns true if `candidate` is strictly newer than `current` (semver subset: major.minor.patch). */
+function isNewer(current: string, candidate: string): boolean {
+  const parse = (v: string) =>
+    v.replace(/^v/, "").split(".").map((n) => parseInt(n, 10) || 0);
+  const [ca, cb, cc] = parse(current);
+  const [na, nb, nc] = parse(candidate);
+  if (na !== ca) return na > ca;
+  if (nb !== cb) return nb > cb;
+  return nc > cc;
+}
+
+export interface UpdateInfo {
+  latestVersion: string;
+  releaseUrl: string;
+  isNewer: boolean;
+}
+
+export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo | null> {
+  try {
+    const res = await fetch(RELEASES_URL, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { tag_name?: string; html_url?: string };
+    const latestVersion = data.tag_name?.replace(/^v/, "") ?? "";
+    if (!latestVersion) return null;
+    return {
+      latestVersion,
+      releaseUrl: data.html_url ?? RELEASES_PAGE,
+      isNewer: isNewer(currentVersion, latestVersion),
+    };
+  } catch {
+    return null;
+  }
+}

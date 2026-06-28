@@ -51,7 +51,7 @@
   "home": {
     "heroTitle": "Download YouTube, TikTok\n& Twitch videos and music.",
     "heroSubtitle": "free, online, no signup.",
-    "heroDesc": "The open-source downloader for YouTube, TikTok and Twitch. Get a plain video or audio file, download TikTok without watermark, grab Twitch clips, or pick <libraryReady>Library Ready</libraryReady> (YouTube) for a fully tagged MP3 with cover art, ID3 tags and synced lyrics.",
+    "heroDesc": "The open-source downloader for YouTube, TikTok and Twitch. Get a plain video or audio file, download TikTok without watermark, grab Twitch clips, or pick Library Ready (YouTube) for a fully tagged MP3 with cover art, ID3 tags and synced lyrics.",
     "heroLibraryReady": "Library Ready",
     "heroBadge1": "YouTube, TikTok & Twitch",
     "heroBadge2": "No ads, ever",
@@ -60,7 +60,7 @@
     "heroDisclaimer": "Please only download content you own or have the rights to.",
     "ytHeroTitle": "Download YouTube videos\nas MP4, MP3 or Library Ready.",
     "ytHeroSubtitle": "free, online, no signup.",
-    "ytHeroDesc": "The open-source YouTube downloader. Get a plain video or audio file or pick <libraryReady>Library Ready</libraryReady> and receive a fully tagged MP3 with cover art, ID3 tags and synced lyrics, ready for your favourite music player. No browser extension, no desktop app, no signup.",
+    "ytHeroDesc": "The open-source YouTube downloader. Get a plain video or audio file or pick Library Ready and receive a fully tagged MP3 with cover art, ID3 tags and synced lyrics, ready for your favourite music player. No browser extension, no desktop app, no signup.",
     "ytHeroBadge1": "Unlimited downloads",
     "ytHeroBadge2": "No ads, ever",
     "ytHeroBadge3": "Open source",
