@@ -1,7 +1,5 @@
-// Update check — points to the native app GitHub repo releases.
-// Change RELEASES_URL when the native app gets its own repo/release page.
-const RELEASES_URL = "https://api.github.com/repos/DestroyCom/StroyGetter/releases/latest";
-export const RELEASES_PAGE = "https://github.com/DestroyCom/StroyGetter/releases";
+const RELEASES_URL = "https://api.github.com/repos/DestroyCom/Stroygetter-Native/releases/latest";
+export const RELEASES_PAGE = "https://github.com/DestroyCom/Stroygetter-Native/releases";
 
 /** Returns true if `candidate` is strictly newer than `current` (semver subset: major.minor.patch). */
 function isNewer(current: string, candidate: string): boolean {
