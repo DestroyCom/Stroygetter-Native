@@ -81,6 +81,7 @@ export function Fetch() {
           album: meta.album,
           year: meta.year,
           coverUrl: meta.coverUrl,
+          coverUrlFallback: meta.coverUrlFallback,
           lyricsLrc: meta.lyricsLrc,
           thumbnail: info.thumbnail,
         });

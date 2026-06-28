@@ -28,6 +28,22 @@ fn sanitize(s: &str) -> String {
         .to_string()
 }
 
+// Downloads a URL and returns the body bytes.
+// Returns None on network error, non-2xx status, or empty body.
+async fn try_fetch_cover(url: &str) -> Option<Vec<u8>> {
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(5))
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .ok()?;
+    let res = client.get(url).send().await.ok()?;
+    if !res.status().is_success() {
+        return None;
+    }
+    let bytes = res.bytes().await.ok()?;
+    if bytes.is_empty() { None } else { Some(bytes.to_vec()) }
+}
+
 #[tauri::command]
 pub async fn download_library_ready(
     app: AppHandle,
@@ -37,6 +53,7 @@ pub async fn download_library_ready(
     album: String,
     year: String,
     cover_url: String,
+    cover_url_fallback: Option<String>,
     lyrics_lrc: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
@@ -81,19 +98,31 @@ pub async fn download_library_ready(
 
     sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args, Some(tx)).await?;
 
-    // Phase 2: download cover image
+    // Phase 2: download cover image — try primary URL, fall back, proceed without on failure
     emit_progress(&app, "fetching_cover", 0.0);
 
-    if !cover_url.is_empty() {
-        let response = reqwest::get(&cover_url)
-            .await
-            .map_err(|e| format!("cover download failed: {}", e))?;
-        let bytes = response.bytes().await.map_err(|e| e.to_string())?;
-        std::fs::write(&tmp_cover, &bytes).map_err(|e| e.to_string())?;
-        emit_progress(&app, "fetching_cover", 100.0);
-    }
+    let cover_bytes: Option<Vec<u8>> = if !cover_url.is_empty() {
+        let mut bytes = try_fetch_cover(&cover_url).await;
+        if bytes.is_none() {
+            if let Some(ref fallback) = cover_url_fallback {
+                bytes = try_fetch_cover(fallback).await;
+            }
+        }
+        bytes
+    } else {
+        None
+    };
 
-    // Phase 3: embed with ffmpeg
+    let has_cover = if let Some(ref bytes) = cover_bytes {
+        std::fs::write(&tmp_cover, bytes).map_err(|e| e.to_string())?;
+        true
+    } else {
+        false
+    };
+
+    emit_progress(&app, "fetching_cover", 100.0);
+
+    // Phase 3: embed metadata with ffmpeg
     emit_progress(&app, "embedding", 0.0);
 
     let mut ffmpeg_args: Vec<String> = vec![
@@ -101,7 +130,6 @@ pub async fn download_library_ready(
         "-i".to_string(), tmp_audio.to_string_lossy().to_string(),
     ];
 
-    let has_cover = !cover_url.is_empty() && tmp_cover.exists();
     if has_cover {
         ffmpeg_args.extend(["-i".to_string(), tmp_cover.to_string_lossy().to_string()]);
     }
@@ -141,7 +169,6 @@ pub async fn download_library_ready(
 
     emit_progress(&app, "embedding", 100.0);
 
-    // Cleanup temp files
     let _ = std::fs::remove_file(&tmp_audio);
     let _ = std::fs::remove_file(&tmp_cover);
 

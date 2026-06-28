@@ -35,6 +35,7 @@ export const downloadLibraryReady = (params: {
   album: string;
   year: string;
   coverUrl: string;
+  coverUrlFallback?: string;
   lyricsLrc: string;
   thumbnail?: string;
 }): Promise<string> =>
@@ -45,6 +46,7 @@ export const downloadLibraryReady = (params: {
     album: params.album,
     year: params.year,
     coverUrl: params.coverUrl,
+    coverUrlFallback: params.coverUrlFallback,
     lyricsLrc: params.lyricsLrc,
     thumbnail: params.thumbnail,
   });
