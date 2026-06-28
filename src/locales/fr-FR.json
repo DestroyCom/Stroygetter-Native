@@ -639,7 +639,9 @@
     "newDownload": "Nouveau téléchargement",
     "history": "Historique",
     "noDownloads": "Aucun téléchargement",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "metadata": "Métadonnées",
+    "editMetadata": "Modifier les métadonnées"
   },
   "settings": {
     "title": "Paramètres",
@@ -658,5 +660,27 @@
     "noBrowserFound": "Aucun navigateur compatible détecté.",
     "cookiesWarningTitle": "Option avancée — dernier recours",
     "cookiesWarningBody": "Cette option lit les cookies de session de votre navigateur pour contourner les restrictions YouTube. Elle ne doit être activée qu'en cas de problèmes persistants de téléchargement. L'utilisation se fait à vos risques et périls. Les développeurs de StroyGetter ne peuvent être tenus responsables d'une suspension de compte ou de tout autre conséquence liée à l'activation de cette option."
+  },
+  "metadataEditor": {
+    "title": "Éditeur de métadonnées",
+    "pickFile": "Choisir un fichier MP3",
+    "fields": {
+      "title": "Titre",
+      "artist": "Artiste",
+      "album": "Album",
+      "year": "Année"
+    },
+    "cover": {
+      "search": "Pochette — recherche iTunes",
+      "searchPlaceholder": "Artiste + titre",
+      "searchButton": "Chercher"
+    },
+    "lyrics": {
+      "plain": "Paroles (texte brut)",
+      "lrc": "Paroles synchronisées — format LRC"
+    },
+    "save": "Enregistrer",
+    "saveSuccess": "Enregistré avec succès",
+    "saveError": "Échec de l'enregistrement"
   }
 }
