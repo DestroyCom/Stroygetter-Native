@@ -1,8 +1,8 @@
-import { useState } from "react";
-import i18n from "i18next";
-import { useTranslation } from "react-i18next";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+import i18n from "i18next";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGS } from "@/lib/i18n";
 
 export function Settings() {
@@ -87,7 +87,7 @@ export function Settings() {
         <p className="text-xs text-white/25 mt-1">Tauri v2 · React 18 · Vite 5</p>
         <button
           type="button"
-          onClick={() => openUrl("https://github.com/DestroyCom/StroyGetter/releases")}
+          onClick={() => openUrl("https://github.com/DestroyCom/Stroygetter-Native/releases")}
           className="mt-3 rounded-xl border border-white/10 bg-white/6 px-4 py-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white"
         >
           {t("settings.checkUpdates", "Vérifier les mises à jour")}

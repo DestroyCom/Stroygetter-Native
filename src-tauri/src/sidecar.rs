@@ -3,6 +3,7 @@ use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::sync::mpsc;
 
+#[allow(dead_code)]
 pub struct SidecarOutput {
     pub stdout: String,
     pub stderr: String,

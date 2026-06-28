@@ -26,7 +26,6 @@ struct YtDlpFormat {
     format_id: Option<String>,
     height: Option<u32>,
     vcodec: Option<String>,
-    acodec: Option<String>,
     format_note: Option<String>,
 }
 
@@ -37,7 +36,6 @@ struct YtDlpInfo {
     channel: Option<String>,
     thumbnail: Option<String>,
     duration: Option<f64>,
-    webpage_url: Option<String>,
     formats: Option<Vec<YtDlpFormat>>,
 }
 
