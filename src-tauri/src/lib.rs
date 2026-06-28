@@ -17,8 +17,11 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            let app_data_dir = app.path().app_data_dir()?;
-            let conn = db::open(&app_data_dir)?;
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let conn = db::open_or_memory(&app_data_dir);
             app.manage(DbConn(std::sync::Mutex::new(conn)));
             Ok(())
         })

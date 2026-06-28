@@ -17,23 +17,33 @@ pub struct DownloadRecord {
     pub created_at: i64,
 }
 
+const SCHEMA: &str = "CREATE TABLE IF NOT EXISTS downloads (
+    id            TEXT PRIMARY KEY,
+    url           TEXT NOT NULL,
+    title         TEXT NOT NULL,
+    author        TEXT,
+    thumbnail_url TEXT,
+    format        TEXT NOT NULL,
+    file_path     TEXT NOT NULL,
+    created_at    INTEGER NOT NULL
+);";
+
 pub fn open(app_data_dir: &std::path::Path) -> Result<Connection> {
     std::fs::create_dir_all(app_data_dir).ok();
     let path = app_data_dir.join("stroygetter.db");
     let conn = Connection::open(path)?;
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS downloads (
-            id            TEXT PRIMARY KEY,
-            url           TEXT NOT NULL,
-            title         TEXT NOT NULL,
-            author        TEXT,
-            thumbnail_url TEXT,
-            format        TEXT NOT NULL,
-            file_path     TEXT NOT NULL,
-            created_at    INTEGER NOT NULL
-        );",
-    )?;
+    conn.execute_batch(SCHEMA)?;
     Ok(conn)
+}
+
+pub fn open_or_memory(app_data_dir: &std::path::Path) -> Connection {
+    if let Ok(conn) = open(app_data_dir) {
+        return conn;
+    }
+    eprintln!("DB open failed, falling back to in-memory");
+    let conn = Connection::open_in_memory().expect("in-memory DB");
+    conn.execute_batch(SCHEMA).expect("in-memory schema");
+    conn
 }
 
 pub fn insert(conn: &Connection, record: &DownloadRecord) -> Result<()> {
