@@ -208,10 +208,10 @@ jobs:
 
       # VirusTotal scan — optional, runs only if VT_API_KEY secret is set.
       # Free API key: https://www.virustotal.com (no credit card, 500 scans/day)
-      # Results appear as a step summary with scan URLs per file.
       - name: VirusTotal scan
+        id: vt
         if: steps.secrets.outputs.has_vt == 'true'
-        uses: virustotal/gh-action-virustotal@v4
+        uses: crazy-max/ghaction-virustotal@v4
         with:
           files: |
             src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
@@ -219,5 +219,69 @@ jobs:
             src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.msi
             src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.AppImage
             src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.deb
-          vt-api-key: ${{ secrets.VT_API_KEY }}
-          request-rate: 4
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+
+      # Write the VT scan URLs into a file and upload it to the release.
+      # The publish job (below) will aggregate all platforms into the release body.
+      - name: Upload VirusTotal results
+        if: steps.secrets.outputs.has_vt == 'true' && steps.vt.outputs.analysis != ''
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo '${{ steps.vt.outputs.analysis }}' \
+            | jq -r '.[] | "- [`\(.file | split("/") | last)`](\(.url))"' \
+            > "vt-${{ matrix.rust-target }}.md"
+          gh release upload "${{ github.ref_name }}" \
+            "vt-${{ matrix.rust-target }}.md" --clobber
+
+  # ── Post-build: aggregate results and update release body ────────────────────
+  publish:
+    name: Update release notes
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download all per-platform VT result files uploaded to the release
+      - name: Collect VirusTotal results
+        id: vt-results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Download VT markdown files if they exist
+          gh release download "${{ github.ref_name }}" \
+            --pattern "vt-*.md" --dir vt-results 2>/dev/null || true
+
+          if [ -d vt-results ] && [ "$(ls vt-results/*.md 2>/dev/null | wc -l)" -gt 0 ]; then
+            {
+              echo "## VirusTotal scans"
+              echo ""
+              echo "All installers were scanned by 70+ antivirus engines at release time:"
+              echo ""
+              cat vt-results/*.md | sort -u
+            } > vt-section.md
+            echo "has_vt=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_vt=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Build the final release body and update it
+      - name: Update release body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHORT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          export SHORT_SHA="${SHORT_SHA:0:7}"
+          envsubst < .github/release-body-template.md > release-body.md
+          if [ -f vt-section.md ]; then
+            printf '\n' >> release-body.md
+            cat vt-section.md >> release-body.md
+          fi
+          gh release edit "${TAG}" --notes-file release-body.md
