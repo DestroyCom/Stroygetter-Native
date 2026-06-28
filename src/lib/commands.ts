@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { DownloadSettings } from "./settings";
-import type { VideoInfo, DownloadRecord, DownloadProgress } from "./types";
+import type { VideoInfo, DownloadRecord, DownloadProgress, AudioMetadata, WriteMetadataArgs } from "./types";
 
 export const fetchVideoInfo = (url: string): Promise<VideoInfo> =>
   invoke("fetch_video_info", { url });
@@ -66,3 +66,18 @@ export const updateDownloadSettings = (settings: DownloadSettings): Promise<void
 
 export const getDownloadSettings = (): Promise<DownloadSettings> =>
   invoke("get_download_settings");
+
+export const readAudioMetadata = (path: string): Promise<AudioMetadata> =>
+  invoke("read_audio_metadata", { path });
+
+export const writeAudioMetadata = (args: WriteMetadataArgs): Promise<void> =>
+  invoke("write_audio_metadata", {
+    path: args.path,
+    title: args.title,
+    artist: args.artist,
+    album: args.album,
+    year: args.year,
+    coverUrl: args.coverUrl,
+    lyricsPlain: args.lyricsPlain,
+    lyricsLrc: args.lyricsLrc,
+  });

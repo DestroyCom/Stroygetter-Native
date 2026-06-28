@@ -1,3 +1,5 @@
+import type { ItunesCoverResult } from "./types";
+
 export interface TrackMetadata {
   title: string;
   artist: string;
@@ -225,4 +227,26 @@ export async function resolveLibraryReadyMetadata(
     // hqdefault always exists — used by Rust backend if primary cover 404s
     coverUrlFallback: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
   };
+}
+
+export async function searchItunesCover(query: string): Promise<ItunesCoverResult[]> {
+  try {
+    const term = encodeURIComponent(query.trim());
+    const res = await fetch(
+      `https://itunes.apple.com/search?term=${term}&media=music&limit=5`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { results?: ItunesResult[] };
+    return (data.results ?? [])
+      .filter((r) => !!r.artworkUrl100)
+      .map((r) => ({
+        trackName: r.trackName ?? "",
+        artistName: r.artistName ?? "",
+        collectionName: r.collectionName ?? "",
+        artworkUrl: (r.artworkUrl100 ?? "").replace("100x100bb", "1000x1000bb"),
+      }));
+  } catch {
+    return [];
+  }
 }

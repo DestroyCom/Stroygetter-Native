@@ -38,3 +38,31 @@ export interface DownloadProgress {
   phase: "downloading" | "fetching_cover" | "embedding";
   percent: number;
 }
+
+export interface AudioMetadata {
+  title?: string;
+  artist?: string;
+  album?: string;
+  year?: string;
+  coverBase64?: string;
+  lyricsPlain?: string;
+  lyricsLrc?: string;
+}
+
+export interface WriteMetadataArgs {
+  path: string;
+  title: string;
+  artist: string;
+  album: string;
+  year: string;
+  coverUrl?: string;
+  lyricsPlain: string;
+  lyricsLrc: string;
+}
+
+export interface ItunesCoverResult {
+  trackName: string;
+  artistName: string;
+  collectionName: string;
+  artworkUrl: string;
+}
