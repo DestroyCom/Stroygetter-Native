@@ -246,10 +246,11 @@ export function MetadataEditor() {
 
       {/* Plain lyrics */}
       <div className="flex flex-col gap-2">
-        <label className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+        <label htmlFor="lyrics-plain" className="text-[10px] font-bold uppercase tracking-widest text-white/30">
           {t("metadataEditor.lyrics.plain")}
         </label>
         <Textarea
+          id="lyrics-plain"
           value={form.lyricsPlain}
           onChange={(e) => setForm((f) => ({ ...f, lyricsPlain: e.target.value }))}
           rows={6}
@@ -260,10 +261,11 @@ export function MetadataEditor() {
 
       {/* LRC lyrics */}
       <div className="flex flex-col gap-2">
-        <label className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+        <label htmlFor="lyrics-lrc" className="text-[10px] font-bold uppercase tracking-widest text-white/30">
           {t("metadataEditor.lyrics.lrc")}
         </label>
         <Textarea
+          id="lyrics-lrc"
           value={form.lyricsLrc}
           onChange={(e) => setForm((f) => ({ ...f, lyricsLrc: e.target.value }))}
           rows={6}
