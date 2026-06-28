@@ -201,12 +201,28 @@ pub async fn download_tiktok(
     let out = downloads_dir().join(format!("{}.{}", safe, ext));
     let out_str = out.to_string_lossy().to_string();
 
-    let mut args = vec![];
+    let mut args = vec![
+        "--no-check-certificates".to_string(),
+        "--no-warnings".to_string(),
+        "--no-playlist".to_string(),
+    ];
 
     if audio_only {
-        args.extend(["-x".to_string(), "--audio-format".to_string(), "mp3".to_string()]);
-    } else if !watermark {
-        args.extend(["-f".to_string(), "download_addr-0".to_string()]);
+        args.extend([
+            "-f".to_string(),
+            "bestaudio[acodec!=none]/best[acodec!=none][format_id!=download]".to_string(),
+            "-x".to_string(),
+            "--audio-format".to_string(), "mp3".to_string(),
+            "--audio-quality".to_string(), "192K".to_string(),
+        ]);
+        if let Some(ffmpeg) = get_sidecar_exe("ffmpeg") {
+            args.push("--ffmpeg-location".to_string());
+            args.push(ffmpeg);
+        }
+    } else if watermark {
+        args.extend(["-f".to_string(), "download".to_string()]);
+    } else {
+        args.extend(["-f".to_string(), "best[vcodec^=h264][format_id!=download]".to_string()]);
     }
 
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
