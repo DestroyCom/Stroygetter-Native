@@ -6,6 +6,11 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"      # stable:     v1.2.3
       - "v[0-9]+.[0-9]+.[0-9]+-*"    # prerelease: v1.2.3-beta.1
 
+permissions:
+  contents: write
+  id-token: write      # required for GitHub Attestations
+  attestations: write  # required for GitHub Attestations
+
 jobs:
   build:
     name: ${{ matrix.rust-target }}
@@ -45,7 +50,6 @@ jobs:
         with:
           targets: ${{ matrix.rust-target }}
 
-      # Caches ~/.cargo/registry, ~/.cargo/git, and src-tauri/target
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -61,10 +65,8 @@ jobs:
             libappindicator3-dev librsvg2-dev patchelf \
             ffmpeg
 
-      # ── Sidecar binaries ────────────────────────────────────────────────────
-      # Cache is keyed by target + month so yt-dlp auto-updates monthly.
-      # restore-keys allows using last month's cache on a miss (avoids cold starts).
-      - name: Cache month (for sidecar rotation)
+      # ── Sidecar binaries (cached monthly) ───────────────────────────────────
+      - name: Cache month (sidecar rotation)
         id: cache-ym
         shell: bash
         run: echo "ym=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
@@ -78,7 +80,6 @@ jobs:
           restore-keys: |
             sidecars-${{ matrix.rust-target }}-
 
-      # yt-dlp — Unix
       - name: Download yt-dlp (Unix)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os != 'Windows'
         run: |
@@ -87,7 +88,6 @@ jobs:
             -o "src-tauri/binaries/yt-dlp-${{ matrix.rust-target }}"
           chmod +x "src-tauri/binaries/yt-dlp-${{ matrix.rust-target }}"
 
-      # yt-dlp — Windows
       - name: Download yt-dlp (Windows)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
         shell: pwsh
@@ -96,19 +96,16 @@ jobs:
             -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" `
             -OutFile "src-tauri\binaries\yt-dlp-${{ matrix.rust-target }}.exe"
 
-      # ffmpeg — macOS (brew; binary already installed on runner after cache warm-up)
       - name: Install ffmpeg (macOS)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'macOS'
         run: |
           brew install --quiet ffmpeg
           cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
 
-      # ffmpeg — Linux (installed via apt above, just copy the binary)
       - name: Copy ffmpeg (Linux)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
 
-      # ffmpeg — Windows (static build from BtbN)
       - name: Download ffmpeg (Windows)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
         shell: pwsh
@@ -123,10 +120,7 @@ jobs:
       # ── Frontend ─────────────────────────────────────────────────────────────
       - run: npm ci
 
-      # ── Tauri build + GitHub Release ─────────────────────────────────────────
-      # Stable tag (v1.2.3)  → published release
-      # Pre tag   (v1.2.3-*) → prerelease
-      # releaseDraft: true   → all matrix jobs upload before the release goes live
+      # ── Tauri build + create GitHub Release ──────────────────────────────────
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -137,3 +131,93 @@ jobs:
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           args: --target ${{ matrix.rust-target }}
+
+      # ── Post-build: checksums, signatures, verification ──────────────────────
+
+      # Detect which secrets are configured (optional features)
+      - name: Detect optional secrets
+        id: secrets
+        shell: bash
+        run: |
+          echo "has_gpg=${{ secrets.GPG_PRIVATE_KEY != '' }}" >> $GITHUB_OUTPUT
+          echo "has_vt=${{ secrets.VT_API_KEY != '' }}"      >> $GITHUB_OUTPUT
+
+      # Find the installer/package files produced by tauri build
+      - name: Locate bundle artifacts
+        id: bundle
+        shell: bash
+        run: |
+          dir="src-tauri/target/${{ matrix.rust-target }}/release/bundle"
+          find "$dir" -type f \( \
+            -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \
+            -o -name "*.AppImage" -o -name "*.deb" \
+          \) | sort > artifacts.txt
+          echo "Found artifacts:"
+          cat artifacts.txt
+
+      # SHA-256 checksum file — always generated, uploaded to the release
+      - name: SHA-256 checksums
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          checksum_file="SHA256SUMS-${{ matrix.rust-target }}.txt"
+          while IFS= read -r f; do
+            if command -v sha256sum &>/dev/null; then
+              sha256sum "$f"
+            else
+              shasum -a 256 "$f"
+            fi
+          done < artifacts.txt > "$checksum_file"
+          echo "--- checksums ---"
+          cat "$checksum_file"
+          gh release upload "${{ github.ref_name }}" "$checksum_file" --clobber
+
+      # GitHub Attestations — cryptographic SLSA provenance (free, no secrets needed)
+      # Proves each binary was produced by this repo's CI from a specific commit.
+      # Verify: gh attestation verify <file> --repo DestroyCom/Stroygetter-Native
+      - name: GitHub provenance attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.deb
+
+      # GPG signing — optional, runs only if GPG_PRIVATE_KEY secret is set.
+      # Produces a .asc detached signature alongside each installer.
+      # Setup: see SECURITY.md for key generation instructions.
+      - name: GPG sign artifacts
+        if: steps.secrets.outputs.has_gpg == 'true'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --passphrase "$GPG_PASSPHRASE" --import
+          while IFS= read -r f; do
+            gpg --batch --yes \
+              --passphrase "$GPG_PASSPHRASE" \
+              --pinentry-mode loopback \
+              --detach-sign --armor "$f"
+            gh release upload "${{ github.ref_name }}" "${f}.asc" --clobber
+          done < artifacts.txt
+
+      # VirusTotal scan — optional, runs only if VT_API_KEY secret is set.
+      # Free API key: https://www.virustotal.com (no credit card, 500 scans/day)
+      # Results appear as a step summary with scan URLs per file.
+      - name: VirusTotal scan
+        if: steps.secrets.outputs.has_vt == 'true'
+        uses: virustotal/gh-action-virustotal@v4
+        with:
+          files: |
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.deb
+          vt-api-key: ${{ secrets.VT_API_KEY }}
+          request-rate: 4
