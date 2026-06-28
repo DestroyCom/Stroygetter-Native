@@ -1,0 +1,73 @@
+name: Bump version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Type de bump"
+        required: true
+        type: choice
+        options: [patch, minor, major]
+      prerelease:
+        description: "Suffixe prérelease (ex: beta.1) — vide pour une release stable"
+        required: false
+        type: string
+
+jobs:
+  bump:
+    name: Bump ${{ inputs.bump }}${{ inputs.prerelease != '' && format(' ({0})', inputs.prerelease) || '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # PAT needed to push a tag that triggers release.yml
+          # (GITHUB_TOKEN pushes are intentionally blocked from triggering other workflows)
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Compute next version
+        id: ver
+        run: |
+          current=$(jq -r '.version' src-tauri/tauri.conf.json)
+          IFS='.' read -r major minor patch <<< "$current"
+
+          case "${{ inputs.bump }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+
+          base="${major}.${minor}.${patch}"
+          suffix="${{ inputs.prerelease }}"
+
+          if [ -n "$suffix" ]; then
+            version="${base}-${suffix}"
+          else
+            version="$base"
+          fi
+
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "tag=v$version"    >> $GITHUB_OUTPUT
+          echo "Next version: $version"
+
+      - name: Update tauri.conf.json
+        run: |
+          jq --arg v "${{ steps.ver.outputs.version }}" '.version = $v' \
+            src-tauri/tauri.conf.json > _tmp.json
+          mv _tmp.json src-tauri/tauri.conf.json
+
+      - name: Update Cargo.toml
+        run: |
+          sed -i 's/^version = ".*"/version = "${{ steps.ver.outputs.version }}"/' \
+            src-tauri/Cargo.toml
+
+      - name: Commit, tag and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src-tauri/tauri.conf.json src-tauri/Cargo.toml
+          git commit -m "chore: bump version to ${{ steps.ver.outputs.version }}"
+          git tag "${{ steps.ver.outputs.tag }}"
+          git push origin HEAD:${{ github.ref_name }} "${{ steps.ver.outputs.tag }}"
