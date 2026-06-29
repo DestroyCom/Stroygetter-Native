@@ -221,7 +221,7 @@ pub async fn download_video(
         .args(["-i", &video_tmp_str, "-i", &audio_tmp_str,
                "-map", "0:v", "-map", "1:a", "-c", "copy", "-y", &out_str])
         .output()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| { cleanup(); e.to_string() })?;
     cleanup();
 
     if !merge.status.success() {
@@ -444,8 +444,8 @@ mod tests {
 
     #[test]
     fn temp_subdir_names_are_unique() {
-        let a = format!("{}", uuid::Uuid::new_v4().simple());
-        let b = format!("{}", uuid::Uuid::new_v4().simple());
+        let a = format!("{}", Uuid::new_v4().simple());
+        let b = format!("{}", Uuid::new_v4().simple());
         assert_ne!(a, b);
     }
 }
