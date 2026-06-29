@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Textarea } from "@/components/ui/textarea";
+import { trackEvent } from "@/lib/analytics";
 import { readAudioMetadata, writeAudioMetadata } from "@/lib/commands";
 import { searchItunesCover } from "@/lib/metadata";
 import type { ItunesCoverResult, WriteMetadataArgs } from "@/lib/types";
@@ -42,8 +43,10 @@ export function MetadataEditor() {
   useEffect(() => {
     const path = searchParams.get("path");
     if (path) {
+      trackEvent("metadata_opened_from", { from: "sidebar" });
       handleLoadFile(decodeURIComponent(path));
     } else {
+      trackEvent("metadata_opened_from", { from: "file_picker" });
       handleOpenPicker();
     }
   }, []);
@@ -94,6 +97,7 @@ export function MetadataEditor() {
   async function runItunesSearch(query: string) {
     if (!query.trim()) return;
     setIsSearching(true);
+    trackEvent("itunes_cover_searched");
     try {
       const results = await searchItunesCover(query);
       setItunesResults(results);
@@ -119,6 +123,13 @@ export function MetadataEditor() {
         lyricsLrc: form.lyricsLrc,
       };
       await writeAudioMetadata(args);
+      trackEvent("metadata_saved", {
+        has_cover: selectedCoverUrl !== null,
+        has_lyrics_plain: form.lyricsPlain.trim().length > 0,
+        has_lyrics_lrc: form.lyricsLrc.trim().length > 0,
+        has_year: form.year.trim().length > 0,
+        cover_source: selectedCoverUrl ? "itunes" : "none",
+      });
       setSaveSuccess(true);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : t("metadataEditor.saveError"));
@@ -220,15 +231,18 @@ export function MetadataEditor() {
         </div>
         {itunesResults.length > 0 && (
           <div className="flex gap-2">
-            {itunesResults.map((r) => (
+            {itunesResults.map((r, index) => (
               <button
                 key={r.artworkUrl}
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  if (selectedCoverUrl !== r.artworkUrl) {
+                    trackEvent("itunes_cover_selected", { result_position: index });
+                  }
                   setSelectedCoverUrl((prev) =>
                     prev === r.artworkUrl ? null : r.artworkUrl
-                  )
-                }
+                  );
+                }}
                 title={`${r.artistName} — ${r.collectionName}`}
                 className={cn(
                   "size-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all",
