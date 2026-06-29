@@ -49,7 +49,7 @@ jobs:
       - name: Create placeholder binaries for CI
         run: |
           mkdir -p src-tauri/binaries
-          for bin in yt-dlp ffmpeg; do
+          for bin in yt-dlp ffmpeg bgutil-pot; do
             touch "src-tauri/binaries/${bin}-x86_64-unknown-linux-gnu"
             chmod +x "src-tauri/binaries/${bin}-x86_64-unknown-linux-gnu"
           done
