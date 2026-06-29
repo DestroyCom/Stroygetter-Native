@@ -3,9 +3,9 @@ import { open as openUrl } from "@tauri-apps/plugin-shell";
 import i18n from "i18next";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { detectAvailableBrowsers, updateDownloadSettings } from "@/lib/commands";
-import { SUPPORTED_LANGS } from "@/lib/i18n";
 import { trackEvent } from "@/lib/analytics";
+import { detectAvailableBrowsers, getLogDir, updateDownloadSettings } from "@/lib/commands";
+import { SUPPORTED_LANGS } from "@/lib/i18n";
 import { loadDownloadSettings, saveDownloadSettings } from "@/lib/settings";
 
 const BROWSER_LABELS: Record<string, string> = {
@@ -31,8 +31,10 @@ export function Settings() {
   const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(initial.analyticsEnabled);
   const [errorReportingEnabled, setErrorReportingEnabled] = useState(initial.errorReportingEnabled);
+  const [logDir, setLogDir] = useState<string>("");
 
   useEffect(() => {
+    getLogDir().then(setLogDir).catch(() => {});
     detectAvailableBrowsers().then((browsers) => {
       setAvailableBrowsers(browsers);
       setCookiesBrowser((prev) => (browsers.length > 0 && !browsers.includes(prev) ? browsers[0] : prev));
@@ -270,6 +272,31 @@ export function Settings() {
               />
             </button>
           </label>
+        </div>
+      </section>
+
+      {/* Debug logs */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/40">
+          {t("settings.debugLogs", "Journaux de débogage")}
+        </h2>
+        <div className="flex flex-col gap-2">
+          {logDir && (
+            <p className="rounded-xl border border-white/10 bg-white/4 px-4 py-3 font-mono text-xs text-white/70 break-all">
+              {logDir}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => logDir && openUrl(logDir)}
+            disabled={!logDir}
+            className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-40"
+          >
+            {t("settings.openLogFolder", "Ouvrir le dossier de logs")}
+          </button>
+          <p className="text-xs text-white/35">
+            {t("settings.debugLogsDesc", "Fichiers stroygetter.log — rotation automatique à 5 MB.")}
+          </p>
         </div>
       </section>
 

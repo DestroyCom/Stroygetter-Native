@@ -283,6 +283,25 @@ Config : `VITE_UMAMI_WEBSITE_ID` (Vite env var). Désactivable via toggle Settin
 
 Config Rust : variable d'environnement `GLITCHTIP_DSN` au moment du build (définie dans `release.yml` via `secrets.GLITCHTIP_DSN`). Désactivable via toggle Settings → `errorReportingEnabled` dans localStorage (effectif au prochain lancement).
 
+### Logs fichier (tauri-plugin-log)
+
+`tauri-plugin-log v2` + crate `log 0.4`. Initialisé dans `lib.rs` → `init_logger()` appelé dans `.setup()`.
+
+**Fichier** : `{app_log_dir}/stroygetter.log` (macOS : `~/Library/Logs/eu.stroyco.stroygetter-native/`, Windows : `%APPDATA%\eu.stroyco.stroygetter-native\logs\`). Rotation automatique à 5 MB (`RotationStrategy::KeepOne` = garde 1 backup → ~10 MB max).
+
+**Niveau** : `Debug` en dev, `Info` en prod.
+
+**Points de log Rust** :
+
+- `lib.rs` — démarrage app (version, data dir)
+- `sidecar.rs` — chaque invocation yt-dlp/ffmpeg (args en debug, stderr en warn, exit code)
+- `info.rs` — fetch_video_info (source détectée, nb formats DASH/fallback)
+- `download.rs` — début/fin/erreur de chaque download (url, format, path)
+
+**Frontend** : `src/lib/logger.ts` appelle `attachConsole()` au démarrage (`main.tsx`). Redirige automatiquement tous les `console.log/warn/error` React vers le fichier de log.
+
+**Settings** : section "Journaux de débogage" — affiche le path du dossier + bouton "Ouvrir le dossier" (ouvre dans Finder/Explorer via `shell:allow-open`). Command Rust : `get_log_dir` dans `settings.rs`.
+
 ---
 
 ## Ce qui N'est PAS à porter

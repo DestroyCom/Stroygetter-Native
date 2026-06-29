@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DownloadSettings {
@@ -127,4 +127,12 @@ pub fn get_download_settings(
     state: State<'_, DownloadSettingsState>,
 ) -> DownloadSettings {
     state.0.lock().unwrap().clone()
+}
+
+#[tauri::command]
+pub fn get_log_dir(app: AppHandle) -> String {
+    app.path()
+        .app_log_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default()
 }

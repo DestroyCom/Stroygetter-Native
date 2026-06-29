@@ -139,7 +139,13 @@ pub async fn download_video(
     }
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
+    log::info!("download_video: start url={url} itag={itag} title={title:?}");
+    let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
+    if let Err(ref e) = result {
+        log::error!("download_video: failed — {e}");
+        return Err(e.clone());
+    }
+    log::info!("download_video: complete → {out_str}");
 
     let db = app.state::<DbConn>();
     let conn = db.0.lock().map_err(|e| e.to_string())?;
@@ -174,7 +180,13 @@ pub async fn download_audio(
     }
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
+    log::info!("download_audio: start url={url} title={title:?}");
+    let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
+    if let Err(ref e) = result {
+        log::error!("download_audio: failed — {e}");
+        return Err(e.clone());
+    }
+    log::info!("download_audio: complete → {out_str}");
 
     let db = app.state::<DbConn>();
     let conn = db.0.lock().map_err(|e| e.to_string())?;
@@ -227,7 +239,13 @@ pub async fn download_tiktok(
 
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
+    log::info!("download_tiktok: start url={url} audio_only={audio_only} watermark={watermark}");
+    let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
+    if let Err(ref e) = result {
+        log::error!("download_tiktok: failed — {e}");
+        return Err(e.clone());
+    }
+    log::info!("download_tiktok: complete → {out_str}");
 
     let fmt = if audio_only { "tiktok-audio" } else if watermark { "tiktok-watermark" } else { "tiktok-no-watermark" };
     let db = app.state::<DbConn>();
@@ -267,7 +285,13 @@ pub async fn download_twitch(
     }
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await?;
+    log::info!("download_twitch: start url={url} format_id={format_id}");
+    let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
+    if let Err(ref e) = result {
+        log::error!("download_twitch: failed — {e}");
+        return Err(e.clone());
+    }
+    log::info!("download_twitch: complete → {out_str}");
 
     let fmt = if is_audio { "twitch-audio" } else { "twitch-video" };
     let db = app.state::<DbConn>();

@@ -664,7 +664,10 @@
     "analytics": "Analíticas de uso",
     "analyticsDesc": "Enviar datos de uso anónimos para mejorar la app",
     "errorReporting": "Reporte de errores",
-    "errorReportingDesc": "Enviar informes de fallos automáticamente"
+    "errorReportingDesc": "Enviar informes de fallos automáticamente",
+    "debugLogs": "Registros de depuración",
+    "debugLogsDesc": "Archivos stroygetter.log — rotación automática a 5 MB.",
+    "openLogFolder": "Abrir carpeta de logs"
   },
   "metadataEditor": {
     "title": "Editor de metadatos",

@@ -6,6 +6,7 @@ import { App } from "./App";
 import "./globals.css";
 import "./lib/i18n";
 import { trackAppStarted } from "./lib/analytics";
+import { initLogger } from "./lib/logger";
 import { loadDownloadSettings } from "./lib/settings";
 
 const settings = loadDownloadSettings();
@@ -18,6 +19,7 @@ if (settings.errorReportingEnabled && import.meta.env.VITE_GLITCHTIP_DSN) {
   });
 }
 
+initLogger();
 trackAppStarted();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

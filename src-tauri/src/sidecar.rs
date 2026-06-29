@@ -15,6 +15,8 @@ pub async fn run_sidecar(
     args: &[&str],
     progress_tx: Option<mpsc::Sender<String>>,
 ) -> Result<SidecarOutput, String> {
+    log::debug!("[sidecar] {} {}", name, args.join(" "));
+
     let mut cmd = app
         .shell()
         .sidecar(name)
@@ -41,18 +43,24 @@ pub async fn run_sidecar(
             }
             CommandEvent::Stderr(line) => {
                 let text = String::from_utf8_lossy(&line).to_string();
-                eprint!("[{name}] {text}");
+                log::warn!("[{name}] {text}");
                 if let Some(tx) = &progress_tx {
                     let _ = tx.send(text.clone()).await;
                 }
                 stderr.push_str(&text);
                 stderr.push('\n');
             }
-            CommandEvent::Error(e) => return Err(e),
+            CommandEvent::Error(e) => {
+                log::error!("[sidecar/{name}] process error: {e}");
+                return Err(e);
+            }
             CommandEvent::Terminated(status) => {
-                if status.code != Some(0) {
+                let code = status.code.unwrap_or(-1);
+                if code != 0 {
+                    log::error!("[sidecar/{name}] exited with code {code}: {stderr}");
                     return Err(format!("process exited with error: {}", stderr));
                 }
+                log::debug!("[sidecar/{name}] exited successfully");
                 break;
             }
             _ => {}

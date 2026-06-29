@@ -6,6 +6,36 @@ use commands::settings::DownloadSettingsState;
 use db::DbConn;
 use tauri::Manager;
 
+fn init_logger(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let log_dir = app.path().app_log_dir()?;
+    std::fs::create_dir_all(&log_dir)?;
+
+    let log_level = if cfg!(debug_assertions) {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Info
+    };
+
+    let file_target = tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Folder {
+        path: log_dir,
+        file_name: Some("stroygetter".to_string()),
+    });
+    let stdout_target = tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout);
+
+    app.handle()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([file_target, stdout_target])
+                .level(log_level)
+                .max_file_size(5_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .build(),
+        )
+        .map_err(|e| format!("failed to init logger: {e}"))?;
+
+    Ok(())
+}
+
 fn init_sentry() -> Option<sentry::ClientInitGuard> {
     let dsn = option_env!("GLITCHTIP_DSN")?;
     if dsn.is_empty() {
@@ -34,6 +64,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let _ = init_logger(app);
+
             let app_data_dir = app
                 .path()
                 .app_data_dir()
@@ -43,6 +75,13 @@ pub fn run() {
             app.manage(DownloadSettingsState(std::sync::Mutex::new(
                 commands::settings::DownloadSettings::default(),
             )));
+
+            log::info!(
+                "StroyGetter {} started — data dir: {}",
+                env!("CARGO_PKG_VERSION"),
+                app_data_dir.display()
+            );
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -58,6 +97,7 @@ pub fn run() {
             commands::settings::detect_available_browsers,
             commands::settings::update_download_settings,
             commands::settings::get_download_settings,
+            commands::settings::get_log_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

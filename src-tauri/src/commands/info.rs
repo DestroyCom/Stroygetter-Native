@@ -83,17 +83,15 @@ where
 }
 
 fn parse_youtube_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
-    // Prefer DASH video-only H.264 streams (same approach as web version).
-    // These give the full quality range (720p, 1080p+) when YouTube returns DASH manifests.
     let dash = collect_formats_by_filter(formats, |f| {
         f.vcodec.as_deref().map(|v| v.starts_with("avc")).unwrap_or(false)
             && f.acodec.as_deref() == Some("none")
     });
     if !dash.is_empty() {
+        log::debug!("parse_youtube_formats: DASH path ({} formats)", dash.len());
         return dash;
     }
-    // Fallback: any video stream (covers muxed progressive formats when DASH is unavailable,
-    // e.g. when YouTube restricts the format list due to missing po_token).
+    log::debug!("parse_youtube_formats: DASH unavailable, using muxed fallback");
     collect_formats_by_filter(formats, |f| f.vcodec.as_deref() != Some("none"))
 }
 
@@ -128,12 +126,25 @@ pub async fn fetch_video_info(
     let output = sidecar::run_sidecar(&app, "yt-dlp", &args_ref, None).await?;
 
     let info: YtDlpInfo = serde_json::from_str(output.stdout.trim())
-        .map_err(|e| format!("failed to parse yt-dlp output: {}", e))?;
+        .map_err(|e| {
+            log::error!("fetch_video_info: failed to parse yt-dlp output for {url}: {e}");
+            format!("failed to parse yt-dlp output: {}", e)
+        })?;
 
     let source = detect_source(&url);
+    log::info!("fetch_video_info: source={source} url={url}");
+
     let formats = match source {
-        "youtube" => info.formats.as_deref().map(parse_youtube_formats).unwrap_or_default(),
-        "twitch" => info.formats.as_deref().map(parse_twitch_formats).unwrap_or_default(),
+        "youtube" => {
+            let f = info.formats.as_deref().map(parse_youtube_formats).unwrap_or_default();
+            log::info!("fetch_video_info: {} youtube formats resolved", f.len());
+            f
+        }
+        "twitch" => {
+            let f = info.formats.as_deref().map(parse_twitch_formats).unwrap_or_default();
+            log::info!("fetch_video_info: {} twitch formats resolved", f.len());
+            f
+        }
         _ => vec![],
     };
 

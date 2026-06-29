@@ -111,6 +111,12 @@ export const readAudioMetadata = (path: string): Promise<AudioMetadata> =>
     throw e;
   });
 
+export const getLogDir = (): Promise<string> =>
+  invoke<string>("get_log_dir").catch((e) => {
+    captureIfEnabled(e, { command: "get_log_dir" });
+    throw e;
+  });
+
 export const writeAudioMetadata = (args: WriteMetadataArgs): Promise<void> =>
   invoke<void>("write_audio_metadata", {
     path: args.path,

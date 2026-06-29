@@ -664,7 +664,10 @@
     "analytics": "Usage Analytics",
     "analyticsDesc": "Send anonymous usage data to improve the app",
     "errorReporting": "Crash Reporting",
-    "errorReportingDesc": "Automatically send crash reports"
+    "errorReportingDesc": "Automatically send crash reports",
+    "debugLogs": "Debug logs",
+    "debugLogsDesc": "stroygetter.log files — auto-rotated at 5 MB.",
+    "openLogFolder": "Open log folder"
   },
   "metadataEditor": {
     "title": "Metadata Editor",
