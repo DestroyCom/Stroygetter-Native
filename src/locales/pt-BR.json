@@ -659,7 +659,12 @@
     "browserSource": "Navegador de origem",
     "noBrowserFound": "Nenhum navegador compatível detectado.",
     "cookiesWarningTitle": "Opção avançada — último recurso",
-    "cookiesWarningBody": "Esta opção lê os cookies de sessão do seu navegador para contornar as restrições do YouTube. Deve ser ativada apenas se você tiver problemas persistentes de download. O uso é por sua conta e risco. Os desenvolvedores do StroyGetter não podem ser responsabilizados por qualquer suspensão de conta ou outras consequências resultantes da ativação desta opção."
+    "cookiesWarningBody": "Esta opção lê os cookies de sessão do seu navegador para contornar as restrições do YouTube. Deve ser ativada apenas se você tiver problemas persistentes de download. O uso é por sua conta e risco. Os desenvolvedores do StroyGetter não podem ser responsabilizados por qualquer suspensão de conta ou outras consequências resultantes da ativação desta opção.",
+    "privacy": "Privacidade",
+    "analytics": "Análise de uso",
+    "analyticsDesc": "Enviar dados de uso anônimos para melhorar o app",
+    "errorReporting": "Relatório de erros",
+    "errorReportingDesc": "Enviar relatórios de falhas automaticamente"
   },
   "metadataEditor": {
     "title": "Editor de metadados",

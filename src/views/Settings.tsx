@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { detectAvailableBrowsers, updateDownloadSettings } from "@/lib/commands";
 import { SUPPORTED_LANGS } from "@/lib/i18n";
+import { trackEvent } from "@/lib/analytics";
 import { loadDownloadSettings, saveDownloadSettings } from "@/lib/settings";
 
 const BROWSER_LABELS: Record<string, string> = {
@@ -28,6 +29,8 @@ export function Settings() {
   const [useCookies, setUseCookies] = useState(initial.useCookies);
   const [cookiesBrowser, setCookiesBrowser] = useState(initial.cookiesBrowser);
   const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(initial.analyticsEnabled);
+  const [errorReportingEnabled, setErrorReportingEnabled] = useState(initial.errorReportingEnabled);
 
   useEffect(() => {
     detectAvailableBrowsers().then((browsers) => {
@@ -46,6 +49,18 @@ export function Settings() {
     setCookiesBrowser(browser);
     const saved = saveDownloadSettings({ useCookies, cookiesBrowser: browser });
     updateDownloadSettings(saved);
+  };
+
+  const handleAnalyticsToggle = (enabled: boolean) => {
+    trackEvent("analytics_toggled", { enabled });
+    setAnalyticsEnabled(enabled);
+    saveDownloadSettings({ analyticsEnabled: enabled });
+  };
+
+  const handleErrorReportingToggle = (enabled: boolean) => {
+    trackEvent("error_reporting_toggled", { enabled });
+    setErrorReportingEnabled(enabled);
+    saveDownloadSettings({ errorReportingEnabled: enabled });
   };
 
   const handleLangChange = (code: string) => {
@@ -191,6 +206,68 @@ export function Settings() {
               </p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Privacy */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/40">
+          {t("settings.privacy", "Confidentialité")}
+        </h2>
+        <div className="flex flex-col gap-3">
+          <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/4 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-white">
+                {t("settings.analytics", "Analytics d'utilisation")}
+              </p>
+              <p className="mt-0.5 text-xs text-white/35">
+                {t("settings.analyticsDesc", "Envoyer des données d'utilisation anonymes pour améliorer l'app")}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={analyticsEnabled}
+              aria-label={t("settings.analytics", "Analytics d'utilisation")}
+              onClick={() => handleAnalyticsToggle(!analyticsEnabled)}
+              className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
+                analyticsEnabled ? "bg-stroy-500" : "bg-white/15"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  analyticsEnabled ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </label>
+
+          <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/4 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-white">
+                {t("settings.errorReporting", "Rapport de crash")}
+              </p>
+              <p className="mt-0.5 text-xs text-white/35">
+                {t("settings.errorReportingDesc", "Envoyer automatiquement les rapports de crash")}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={errorReportingEnabled}
+              aria-label={t("settings.errorReporting", "Rapport de crash")}
+              onClick={() => handleErrorReportingToggle(!errorReportingEnabled)}
+              className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
+                errorReportingEnabled ? "bg-stroy-500" : "bg-white/15"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  errorReportingEnabled ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </label>
         </div>
       </section>
 

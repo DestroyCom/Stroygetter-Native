@@ -659,7 +659,12 @@
     "browserSource": "Source browser",
     "noBrowserFound": "No compatible browser detected.",
     "cookiesWarningTitle": "Advanced option — last resort",
-    "cookiesWarningBody": "This option reads your browser session cookies to bypass YouTube restrictions. It should only be enabled if you experience persistent download issues. Use at your own risk. The StroyGetter developers cannot be held responsible for any account suspension or other consequences resulting from enabling this option."
+    "cookiesWarningBody": "This option reads your browser session cookies to bypass YouTube restrictions. It should only be enabled if you experience persistent download issues. Use at your own risk. The StroyGetter developers cannot be held responsible for any account suspension or other consequences resulting from enabling this option.",
+    "privacy": "Privacy",
+    "analytics": "Usage Analytics",
+    "analyticsDesc": "Send anonymous usage data to improve the app",
+    "errorReporting": "Crash Reporting",
+    "errorReportingDesc": "Automatically send crash reports"
   },
   "metadataEditor": {
     "title": "Metadata Editor",
