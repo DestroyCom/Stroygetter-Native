@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { GetterInput } from "@/components/custom/GetterInput";
 import { VideoLoading } from "@/components/custom/VideoLoading";
 import { VideoSelect } from "@/components/custom/VideoSelect";
+import { trackEvent } from "@/lib/analytics";
 import {
   downloadAudio,
   downloadLibraryReady,
@@ -56,6 +57,17 @@ export function Fetch() {
     setIsDownloading(true);
     setProgress(0);
 
+    const source = info.source;
+    const format: "video" | "audio" | "library_ready" =
+      fmt === "mp3" || fmt === "tiktok-audio" || fmt === "twitch-audio"
+        ? "audio"
+        : fmt === "library-ready"
+        ? "library_ready"
+        : "video";
+
+    trackEvent("download_started", { source, format });
+    const downloadStartTime = Date.now();
+
     try {
       if (fmt === "mp4") {
         await downloadVideo(url, quality, info.title, info.author, info.thumbnail);
@@ -86,9 +98,12 @@ export function Fetch() {
           thumbnail: info.thumbnail,
         });
       }
+      trackEvent("download_completed", { source, format, duration_ms: Date.now() - downloadStartTime });
       window.dispatchEvent(new Event("download-complete"));
     } catch (e: unknown) {
-      setDownloadError(e instanceof Error ? e.message : t("videoSelect.errorDownload"));
+      const errorMsg = e instanceof Error ? e.message : t("videoSelect.errorDownload");
+      trackEvent("download_failed", { source, format, error: errorMsg });
+      setDownloadError(errorMsg);
     } finally {
       setIsDownloading(false);
     }
