@@ -124,6 +124,7 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GLITCHTIP_DSN: ${{ secrets.GLITCHTIP_DSN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "StroyGetter ${{ github.ref_name }}"

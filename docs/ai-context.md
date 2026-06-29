@@ -17,15 +17,16 @@ via un installeur natif Windows / macOS / Android.
 
 ## Stack implémentée
 
-| Couche      | Choix                                        | Raison                                        |
-| ----------- | -------------------------------------------- | --------------------------------------------- |
-| Shell natif | **Tauri v2**                                 | WebView OS → bundle ~20 MB vs 300 MB Electron |
-| Backend     | **Rust** (src-tauri/)                        | Inclus dans Tauri, typé, compile ou crash     |
-| Frontend    | **React 18 + Vite 5 + TypeScript**           | Réutilise les composants du projet web        |
-| UI          | **shadcn/ui (new-york) + Tailwind CSS v4**   | `@import "tailwindcss"`, pas de `tailwind.config.js` |
-| Routing     | **react-router-dom v6**                      | Routes : `/`, `/fetch`, `/settings`           |
-| i18n        | **react-i18next** — 4 locales               | en, fr-FR, es-419, pt-BR — détection via localStorage + navigator |
-| DB          | **SQLite via rusqlite** (bundled 0.31)       | Cache local des fichiers téléchargés          |
+| Couche        | Choix                                      | Raison                                                            |
+| ------------- | ------------------------------------------ | ----------------------------------------------------------------- |
+| Shell natif   | **Tauri v2**                               | WebView OS → bundle ~20 MB vs 300 MB Electron                     |
+| Backend       | **Rust** (src-tauri/)                      | Inclus dans Tauri, typé, compile ou crash                         |
+| Frontend      | **React 18 + Vite 5 + TypeScript**         | Réutilise les composants du projet web                            |
+| UI            | **shadcn/ui (new-york) + Tailwind CSS v4** | `@import "tailwindcss"`, pas de `tailwind.config.js`              |
+| Routing       | **react-router-dom v6**                    | Routes : `/`, `/fetch`, `/settings`                               |
+| i18n          | **react-i18next** — 4 locales              | en, fr-FR, es-419, pt-BR — détection via localStorage + navigator |
+| DB            | **SQLite via rusqlite** (bundled 0.31)     | Cache local des fichiers téléchargés                              |
+| Observabilité | **Umami + GlitchTip**                      | Analytics anonymes + rapport de crash                             |
 
 ---
 
@@ -257,6 +258,30 @@ make build     # npm run tauri build
 make test      # npm test + cargo test
 make lint      # tsc --noEmit
 ```
+
+---
+
+## Observabilité
+
+### Analytics (Umami)
+
+`src/lib/analytics.ts` expose trois fonctions :
+
+- `trackEvent(event, data?)` — event custom Umami, no-op si analytics désactivé ou VITE_UMAMI_WEBSITE_ID vide
+- `trackPageView()` — appelle `window.umami?.track()` sans arg (capte la route courante)
+- `trackAppStarted()` — async, envoie `app_started` avec version/os/locale
+
+Events trackés : `app_started`, navigation (`page_view`), `download_started/completed/failed`, `metadata_opened_from`, `metadata_saved`, `itunes_cover_searched/selected`, `language_changed`, `analytics_toggled`, `error_reporting_toggled`, `cookies_toggled`.
+
+Config : `VITE_UMAMI_WEBSITE_ID` (Vite env var). Désactivable via toggle Settings → `analyticsEnabled` dans localStorage.
+
+### Error Reporting (GlitchTip)
+
+**Frontend** : `@sentry/react` initialisé dans `src/main.tsx` si `VITE_GLITCHTIP_DSN` défini. `<Sentry.ErrorBoundary>` wraps `<App>`. Chaque invoke() dans `commands.ts` appelle `captureIfEnabled()` dans son `.catch()`.
+
+**Rust** : crate `sentry 0.34` dans `Cargo.toml`. `init_sentry()` dans `lib.rs` utilise `option_env!("GLITCHTIP_DSN")` (évalué à la compilation). Installe automatiquement un panic hook.
+
+Config Rust : variable d'environnement `GLITCHTIP_DSN` au moment du build (définie dans `release.yml` via `secrets.GLITCHTIP_DSN`). Désactivable via toggle Settings → `errorReportingEnabled` dans localStorage (effectif au prochain lancement).
 
 ---
 
