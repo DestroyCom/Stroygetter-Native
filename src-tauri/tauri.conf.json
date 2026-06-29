@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "StroyGetter",
+  "version": "0.1.0",
+  "identifier": "eu.stroyco.stroygetter-native",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "StroyGetter",
+        "width": 1200,
+        "height": 750,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' tauri: asset:; script-src 'self' https://analytics.stroyco.eu; img-src 'self' tauri: asset: data: https://img.youtube.com https://i.ytimg.com https://p16-sign-va.tiktokcdn.com https://*.tiktokcdn.com https://*.tiktokcdn-eu.com https://clips.twitch.tv https://*.jtvnw.net https://*.dzcdn.net https://*.mzstatic.com; connect-src 'self' tauri: asset: https://lrclib.net https://itunes.apple.com https://api.github.com https://musicbrainz.org https://coverartarchive.org https://api.deezer.com https://analytics.stroyco.eu https://errors.stroyco.eu; style-src 'self' 'unsafe-inline'; frame-src https://stroygetter.fr"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/yt-dlp",
+      "binaries/ffmpeg",
+      "binaries/bgutil-pot"
+    ]
+  }
+}

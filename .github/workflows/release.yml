@@ -1,0 +1,317 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"      # stable:     v1.2.3
+      - "v[0-9]+.[0-9]+.[0-9]+-*"    # prerelease: v1.2.3-beta.1
+
+permissions:
+  contents: write
+  id-token: write      # required for GitHub Attestations
+  attestations: write  # required for GitHub Attestations
+
+jobs:
+  build:
+    name: ${{ matrix.rust-target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-14          # Apple Silicon (arm64)
+            rust-target: aarch64-apple-darwin
+            ytdlp-asset: yt-dlp_macos
+            bgutil-asset: bgutil-pot-macos-aarch64
+
+          - platform: macos-13          # Intel (x86_64)
+            rust-target: x86_64-apple-darwin
+            ytdlp-asset: yt-dlp_macos
+            bgutil-asset: bgutil-pot-macos-x86_64
+
+          - platform: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            ytdlp-asset: yt-dlp.exe
+            bgutil-asset: bgutil-pot-windows-x86_64.exe
+
+          - platform: ubuntu-22.04
+            rust-target: x86_64-unknown-linux-gnu
+            ytdlp-asset: yt-dlp_linux
+            bgutil-asset: bgutil-pot-linux-x86_64
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # ── Node ────────────────────────────────────────────────────────────────
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      # ── Rust ────────────────────────────────────────────────────────────────
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.rust-target }}
+
+      # ── System dependencies (Linux only) ────────────────────────────────────
+      - name: Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libappindicator3-dev librsvg2-dev patchelf \
+            ffmpeg
+
+      # ── Sidecar binaries (cached monthly) ───────────────────────────────────
+      - name: Cache month (sidecar rotation)
+        id: cache-ym
+        shell: bash
+        run: echo "ym=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+
+      - name: Cache sidecar binaries
+        id: cache-sidecars
+        uses: actions/cache@v6
+        with:
+          path: src-tauri/binaries
+          key: sidecars-${{ matrix.rust-target }}-${{ steps.cache-ym.outputs.ym }}
+          restore-keys: |
+            sidecars-${{ matrix.rust-target }}-
+
+      - name: Download yt-dlp (Unix)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os != 'Windows'
+        run: |
+          curl -fsSL \
+            "https://github.com/yt-dlp/yt-dlp/releases/latest/download/${{ matrix.ytdlp-asset }}" \
+            -o "src-tauri/binaries/yt-dlp-${{ matrix.rust-target }}"
+          chmod +x "src-tauri/binaries/yt-dlp-${{ matrix.rust-target }}"
+
+      - name: Download yt-dlp (Windows)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" `
+            -OutFile "src-tauri\binaries\yt-dlp-${{ matrix.rust-target }}.exe"
+
+      - name: Install ffmpeg (macOS)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'macOS'
+        run: |
+          brew install --quiet ffmpeg
+          cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+
+      - name: Copy ffmpeg (Linux)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        run: cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+
+      - name: Download ffmpeg (Windows)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
+        shell: pwsh
+        env:
+          FFMPEG_URL: "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-29-14-25/ffmpeg-N-125350-g3f6bf150cb-win64-gpl.zip"
+          FFMPEG_SHA256: "a4fa7122b9b7fa82c77b218ac3a1257900d0bf06a3106da55060cb1262d97467"
+        run: |
+          Invoke-WebRequest -Uri $env:FFMPEG_URL -OutFile ffmpeg.zip
+          $actual = (Get-FileHash ffmpeg.zip -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $env:FFMPEG_SHA256.ToLower()) {
+            Write-Error "ffmpeg SHA256 mismatch: expected $env:FFMPEG_SHA256, got $actual"
+            exit 1
+          }
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg_tmp
+          $exe = Get-ChildItem -Recurse -Filter ffmpeg.exe ffmpeg_tmp | Select-Object -First 1
+          Copy-Item $exe.FullName "src-tauri\binaries\ffmpeg-${{ matrix.rust-target }}.exe"
+          Remove-Item -Recurse -Force ffmpeg.zip, ffmpeg_tmp
+
+      - name: Download bgutil-pot (Unix)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os != 'Windows'
+        run: |
+          curl -fsSL \
+            "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/${{ matrix.bgutil-asset }}" \
+            -o "src-tauri/binaries/bgutil-pot-${{ matrix.rust-target }}"
+          chmod +x "src-tauri/binaries/bgutil-pot-${{ matrix.rust-target }}"
+
+      - name: Download bgutil-pot (Windows)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/${{ matrix.bgutil-asset }}" `
+            -OutFile "src-tauri\binaries\bgutil-pot-${{ matrix.rust-target }}.exe"
+
+      # ── Frontend ─────────────────────────────────────────────────────────────
+      - run: npm ci
+
+      # ── Tauri build + create GitHub Release ──────────────────────────────────
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GLITCHTIP_DSN: ${{ secrets.GLITCHTIP_DSN }}
+          VITE_UMAMI_WEBSITE_ID: ${{ secrets.VITE_UMAMI_WEBSITE_ID }}
+          VITE_GLITCHTIP_DSN: ${{ secrets.VITE_GLITCHTIP_DSN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "StroyGetter ${{ github.ref_name }}"
+          releaseBody: ""
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          args: --target ${{ matrix.rust-target }}
+
+      # ── Post-build: checksums, signatures, verification ──────────────────────
+
+      # Detect which secrets are configured (optional features)
+      - name: Detect optional secrets
+        id: secrets
+        shell: bash
+        run: |
+          echo "has_gpg=${{ secrets.GPG_PRIVATE_KEY != '' }}" >> $GITHUB_OUTPUT
+          echo "has_vt=${{ secrets.VT_API_KEY != '' }}"      >> $GITHUB_OUTPUT
+
+      # Find the installer/package files produced by tauri build
+      - name: Locate bundle artifacts
+        id: bundle
+        shell: bash
+        run: |
+          dir="src-tauri/target/${{ matrix.rust-target }}/release/bundle"
+          find "$dir" -type f \( \
+            -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \
+            -o -name "*.AppImage" -o -name "*.deb" \
+          \) | sort > artifacts.txt
+          echo "Found artifacts:"
+          cat artifacts.txt
+
+      # SHA-256 checksum file — always generated, uploaded to the release
+      - name: SHA-256 checksums
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          checksum_file="SHA256SUMS-${{ matrix.rust-target }}.txt"
+          while IFS= read -r f; do
+            if command -v sha256sum &>/dev/null; then
+              sha256sum "$f"
+            else
+              shasum -a 256 "$f"
+            fi
+          done < artifacts.txt > "$checksum_file"
+          echo "--- checksums ---"
+          cat "$checksum_file"
+          gh release upload "${{ github.ref_name }}" "$checksum_file" --clobber
+
+      # GitHub Attestations — cryptographic SLSA provenance (free, no secrets needed)
+      # Proves each binary was produced by this repo's CI from a specific commit.
+      # Verify: gh attestation verify <file> --repo DestroyCom/Stroygetter-Native
+      - name: GitHub provenance attestation
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.deb
+
+      # GPG signing — optional, runs only if GPG_PRIVATE_KEY secret is set.
+      # Produces a .asc detached signature alongside each installer.
+      # Setup: see SECURITY.md for key generation instructions.
+      - name: GPG sign artifacts
+        if: steps.secrets.outputs.has_gpg == 'true'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --passphrase "$GPG_PASSPHRASE" --import
+          while IFS= read -r f; do
+            gpg --batch --yes \
+              --passphrase "$GPG_PASSPHRASE" \
+              --pinentry-mode loopback \
+              --detach-sign --armor "$f"
+            gh release upload "${{ github.ref_name }}" "${f}.asc" --clobber
+          done < artifacts.txt
+
+      # VirusTotal scan — optional, runs only if VT_API_KEY secret is set.
+      # Free API key: https://www.virustotal.com (no credit card, 500 scans/day)
+      - name: VirusTotal scan
+        id: vt
+        if: steps.secrets.outputs.has_vt == 'true'
+        uses: crazy-max/ghaction-virustotal@v5
+        with:
+          files: |
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.deb
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+
+      # Write the VT scan URLs into a file and upload it to the release.
+      # The publish job (below) will aggregate all platforms into the release body.
+      - name: Upload VirusTotal results
+        if: steps.secrets.outputs.has_vt == 'true' && steps.vt.outputs.analysis != ''
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo '${{ steps.vt.outputs.analysis }}' \
+            | jq -r '.[] | "- [`\(.file | split("/") | last)`](\(.url))"' \
+            > "vt-${{ matrix.rust-target }}.md"
+          gh release upload "${{ github.ref_name }}" \
+            "vt-${{ matrix.rust-target }}.md" --clobber
+
+  # ── Post-build: aggregate results and update release body ────────────────────
+  publish:
+    name: Update release notes
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Download all per-platform VT result files uploaded to the release
+      - name: Collect VirusTotal results
+        id: vt-results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Download VT markdown files if they exist
+          gh release download "${{ github.ref_name }}" \
+            --pattern "vt-*.md" --dir vt-results 2>/dev/null || true
+
+          if [ -d vt-results ] && [ "$(ls vt-results/*.md 2>/dev/null | wc -l)" -gt 0 ]; then
+            {
+              echo "## VirusTotal scans"
+              echo ""
+              echo "All installers were scanned by 70+ antivirus engines at release time:"
+              echo ""
+              cat vt-results/*.md | sort -u
+            } > vt-section.md
+            echo "has_vt=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_vt=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Build the final release body and update it
+      - name: Update release body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHORT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          export SHORT_SHA="${SHORT_SHA:0:7}"
+          envsubst < .github/release-body-template.md > release-body.md
+          if [ -f vt-section.md ]; then
+            printf '\n' >> release-body.md
+            cat vt-section.md >> release-body.md
+          fi
+          gh release edit "${TAG}" --notes-file release-body.md

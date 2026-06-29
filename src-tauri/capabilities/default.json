@@ -1,0 +1,24 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for stroygetter-native",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "yt-dlp", "sidecar": true },
+        { "name": "ffmpeg", "sidecar": true },
+        { "name": "bgutil-pot", "sidecar": true }
+      ]
+    },
+    {
+      "identifier": "shell:allow-open",
+      "allow": [{ "url": "https://**" }, { "url": "http://**" }]
+    },
+    "opener:allow-open-path",
+    "dialog:allow-open",
+    "log:default"
+  ]
+}
