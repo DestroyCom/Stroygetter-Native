@@ -56,6 +56,7 @@ export interface WriteMetadataArgs {
   album: string;
   year: string;
   coverUrl?: string;
+  coverPath?: string;
   lyricsPlain: string;
   lyricsLrc: string;
 }

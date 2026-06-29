@@ -113,6 +113,28 @@ async fn fetch_cover_bytes(url: &str) -> Option<(Vec<u8>, String)> {
     if bytes.is_empty() { None } else { Some((bytes.to_vec(), mime)) }
 }
 
+const COVER_SIZE: u32 = 1024;
+
+/// Centre-crop to square then resize to COVER_SIZE×COVER_SIZE, returning JPEG bytes.
+fn resize_cover(bytes: &[u8]) -> Option<Vec<u8>> {
+    let img = image::load_from_memory(bytes).ok()?;
+    let (w, h) = (img.width(), img.height());
+    let side = w.min(h);
+    let cropped = img.crop_imm((w - side) / 2, (h - side) / 2, side, side);
+    let resized = cropped.resize_exact(COVER_SIZE, COVER_SIZE, image::imageops::FilterType::Lanczos3);
+    let mut out = std::io::Cursor::new(Vec::new());
+    resized.write_to(&mut out, image::ImageFormat::Jpeg).ok()?;
+    Some(out.into_inner())
+}
+
+fn mime_from_extension(path: &str) -> &'static str {
+    match path.rsplit('.').next().map(|e| e.to_lowercase()).as_deref() {
+        Some("png") => "image/png",
+        Some("webp") => "image/webp",
+        _ => "image/jpeg",
+    }
+}
+
 #[tauri::command]
 pub async fn write_audio_metadata(
     path: String,
@@ -121,6 +143,7 @@ pub async fn write_audio_metadata(
     album: String,
     year: String,
     cover_url: Option<String>,
+    cover_path: Option<String>,
     lyrics_plain: String,
     lyrics_lrc: String,
 ) -> Result<(), String> {
@@ -133,15 +156,32 @@ pub async fn write_audio_metadata(
         tag.set_year(y);
     }
 
-    // Cover: only replace if a new URL was provided
-    if let Some(ref url) = cover_url {
-        if let Some((bytes, mime)) = fetch_cover_bytes(url).await {
+    // Cover: local file takes priority over remote URL
+    if let Some(ref local) = cover_path {
+        match std::fs::read(local) {
+            Ok(raw) => {
+                let (data, mime) = match resize_cover(&raw) {
+                    Some(jpeg) => (jpeg, "image/jpeg".to_string()),
+                    None => (raw, mime_from_extension(local).to_string()),
+                };
+                tag.remove_picture_by_type(PictureType::CoverFront);
+                tag.add_frame(Picture {
+                    mime_type: mime,
+                    picture_type: PictureType::CoverFront,
+                    description: "Cover".to_string(),
+                    data,
+                });
+            }
+            Err(e) => log::warn!("write_audio_metadata: could not read cover file {local}: {e}"),
+        }
+    } else if let Some(ref url) = cover_url {
+        if let Some((data, mime)) = fetch_cover_bytes(url).await {
             tag.remove_picture_by_type(PictureType::CoverFront);
             tag.add_frame(Picture {
                 mime_type: mime,
                 picture_type: PictureType::CoverFront,
                 description: "Cover".to_string(),
-                data: bytes,
+                data,
             });
         }
     }

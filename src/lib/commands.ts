@@ -143,6 +143,7 @@ export const writeAudioMetadata = (args: WriteMetadataArgs): Promise<void> =>
     album: args.album,
     year: args.year,
     coverUrl: args.coverUrl,
+    coverPath: args.coverPath,
     lyricsPlain: args.lyricsPlain,
     lyricsLrc: args.lyricsLrc,
   }).catch((e) => {
