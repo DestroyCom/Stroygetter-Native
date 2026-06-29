@@ -135,6 +135,7 @@ pub async fn download_video(
     let mut args = vec![
         "-f".to_string(), format_str,
         "--merge-output-format".to_string(), "mp4".to_string(),
+        "--force-overwrites".to_string(),
     ];
     if crate::pot::is_youtube_url(&url) {
         if let Some(token) = crate::pot::get_po_token(&app, &url).await {
@@ -181,6 +182,7 @@ pub async fn download_audio(
         "-x".to_string(),
         "--audio-format".to_string(), "mp3".to_string(),
         "--audio-quality".to_string(), "192K".to_string(),
+        "--force-overwrites".to_string(),
     ];
     if crate::pot::is_youtube_url(&url) {
         if let Some(token) = crate::pot::get_po_token(&app, &url).await {
