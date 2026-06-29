@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { trackEvent, trackPageView } from "../analytics";
+import { trackEvent, trackPageView, trackAppStarted } from "../analytics";
+import { getVersion } from "@tauri-apps/api/app";
+
+vi.mock("@tauri-apps/api/app", () => ({
+  getVersion: vi.fn(),
+}));
 
 const mockUmami = { track: vi.fn() };
 
@@ -32,6 +37,7 @@ describe("trackEvent", () => {
 
   it("calls umami.track when analytics is enabled and env is set", () => {
     vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "test-id");
+    localStorage.setItem("stroygetter-dl-settings", JSON.stringify({ analyticsEnabled: true }));
     trackEvent("download_started", { source: "youtube" });
     expect(mockUmami.track).toHaveBeenCalledWith("download_started", { source: "youtube" });
   });
@@ -58,5 +64,53 @@ describe("trackPageView", () => {
     vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "test-id");
     trackPageView();
     expect(mockUmami.track).toHaveBeenCalledWith();
+  });
+});
+
+describe("trackAppStarted", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.stubGlobal("umami", mockUmami);
+    vi.clearAllMocks();
+    (getVersion as vi.Mock).mockResolvedValue("1.0.0");
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("does not call umami when analytics is disabled", async () => {
+    // VITE_UMAMI_WEBSITE_ID not set → isAnalyticsEnabled returns false
+    vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "");
+    await trackAppStarted();
+    expect(mockUmami.track).not.toHaveBeenCalled();
+  });
+
+  it("calls umami.track with app_started event when analytics is enabled", async () => {
+    vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "test-id");
+    localStorage.setItem("stroygetter-dl-settings", JSON.stringify({ analyticsEnabled: true }));
+    (getVersion as vi.Mock).mockResolvedValue("1.0.0");
+
+    await trackAppStarted();
+
+    expect(mockUmami.track).toHaveBeenCalledWith("app_started", expect.objectContaining({
+      version: "1.0.0",
+      os: expect.any(String),
+      locale: expect.any(String),
+    }));
+  });
+
+  it("handles getVersion rejection gracefully and uses 'unknown' as version", async () => {
+    vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "test-id");
+    localStorage.setItem("stroygetter-dl-settings", JSON.stringify({ analyticsEnabled: true }));
+    (getVersion as vi.Mock).mockRejectedValue(new Error("Version fetch failed"));
+
+    await trackAppStarted();
+
+    expect(mockUmami.track).toHaveBeenCalledWith("app_started", expect.objectContaining({
+      version: "unknown",
+      os: expect.any(String),
+      locale: expect.any(String),
+    }));
   });
 });
