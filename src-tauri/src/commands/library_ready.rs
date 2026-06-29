@@ -1,5 +1,5 @@
 use crate::commands::download::get_sidecar_exe;
-use crate::commands::settings::{build_common_args, DownloadSettingsState};
+use crate::commands::settings::{build_common_args, build_youtube_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
 use serde::Serialize;
@@ -91,7 +91,8 @@ pub async fn download_library_ready(
     let ffmpeg_opt = get_sidecar_exe("ffmpeg");
     let tmp_audio_str = tmp_audio.to_string_lossy().to_string();
 
-    let mut ytdlp_args = build_common_args(&settings);
+    let mut ytdlp_args = build_youtube_args();
+    ytdlp_args.extend(build_common_args(&settings));
     ytdlp_args.extend([
         "-x".to_string(), "--audio-format".to_string(), "mp3".to_string(),
         "--audio-quality".to_string(), "192K".to_string(),

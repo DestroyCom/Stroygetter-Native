@@ -71,10 +71,12 @@ pub fn clear_history(conn: &Connection) -> Result<()> {
 
 pub fn get_history(conn: &Connection) -> Result<Vec<DownloadRecord>> {
     let mut stmt = conn.prepare(
-        "SELECT id, url, title, author, thumbnail_url, format, file_path, MAX(created_at) as created_at
+        "SELECT id, url, title, author, thumbnail_url, format, file_path, created_at
          FROM downloads
-         GROUP BY url
-         ORDER BY MAX(created_at) DESC
+         WHERE id IN (
+             SELECT MAX(id) FROM downloads GROUP BY url
+         )
+         ORDER BY created_at DESC
          LIMIT 50",
     )?;
     let rows = stmt.query_map([], |row| {

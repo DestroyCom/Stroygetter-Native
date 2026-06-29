@@ -302,7 +302,7 @@ pub async fn download_tiktok(
     validate_url(&url)?;
     let safe = sanitize(&title);
     let ext = if audio_only { "mp3" } else { "mp4" };
-    let out = downloads_dir().join(format!("{}.{}", safe, ext));
+    let out = unique_path(&downloads_dir().join(format!("{}.{}", safe, ext)));
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = vec![
@@ -364,7 +364,7 @@ pub async fn download_twitch(
     let safe = sanitize(&title);
     let is_audio = format_id == "audio";
     let ext = if is_audio { "mp3" } else { "mp4" };
-    let out = downloads_dir().join(format!("{}.{}", safe, ext));
+    let out = unique_path(&downloads_dir().join(format!("{}.{}", safe, ext)));
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = vec![];
