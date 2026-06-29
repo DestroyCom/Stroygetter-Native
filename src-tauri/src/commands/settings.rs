@@ -29,7 +29,7 @@ pub fn build_common_args(settings: &DownloadSettings) -> Vec<String> {
     } else {
         args.extend([
             "--extractor-args".to_string(),
-            "youtube:player_client=android,web".to_string(),
+            "youtube:player_client=web,tv_embedded,android".to_string(),
         ]);
     }
     args

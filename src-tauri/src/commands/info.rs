@@ -25,7 +25,7 @@ pub struct VideoInfo {
 #[derive(Deserialize)]
 struct YtDlpFormat {
     format_id: Option<String>,
-    height: Option<u32>,
+    height: Option<f64>,
     vcodec: Option<String>,
     format_note: Option<String>,
 }
@@ -58,10 +58,10 @@ fn parse_youtube_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
         .iter()
         .filter(|f| {
             f.vcodec.as_deref() != Some("none")
-                && f.height.map(|h| h >= 360).unwrap_or(false)
+                && f.height.map(|h| h >= 144.0).unwrap_or(false)
         })
         .filter_map(|f| {
-            let h = f.height?;
+            let h = f.height? as u32;
             if seen.insert(h) {
                 Some(FormatEntry {
                     itag: f.format_id.clone(),
@@ -150,11 +150,37 @@ mod tests {
     #[test]
     fn parse_youtube_formats_filters_audio_only() {
         let formats = vec![
-            YtDlpFormat { format_id: Some("137".to_string()), height: Some(1080), vcodec: Some("avc1".to_string()), format_note: None },
+            YtDlpFormat { format_id: Some("137".to_string()), height: Some(1080.0), vcodec: Some("avc1".to_string()), format_note: None },
             YtDlpFormat { format_id: Some("140".to_string()), height: None, vcodec: Some("none".to_string()), format_note: None },
         ];
         let result = parse_youtube_formats(&formats);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].itag.as_deref(), Some("137"));
+    }
+
+    #[test]
+    fn parse_youtube_formats_includes_below_360p() {
+        let formats = vec![
+            YtDlpFormat { format_id: Some("18".to_string()), height: Some(360.0), vcodec: Some("avc1".to_string()), format_note: None },
+            YtDlpFormat { format_id: Some("133".to_string()), height: Some(240.0), vcodec: Some("avc1".to_string()), format_note: None },
+            YtDlpFormat { format_id: Some("160".to_string()), height: Some(144.0), vcodec: Some("avc1".to_string()), format_note: None },
+        ];
+        let result = parse_youtube_formats(&formats);
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].quality_label.as_deref(), Some("360p"));
+        assert_eq!(result[1].quality_label.as_deref(), Some("240p"));
+        assert_eq!(result[2].quality_label.as_deref(), Some("144p"));
+    }
+
+    #[test]
+    fn parse_youtube_formats_handles_float_height() {
+        let formats = vec![
+            YtDlpFormat { format_id: Some("137".to_string()), height: Some(1080.0), vcodec: Some("avc1".to_string()), format_note: None },
+            YtDlpFormat { format_id: Some("136".to_string()), height: Some(720.0), vcodec: Some("avc1".to_string()), format_note: None },
+        ];
+        let result = parse_youtube_formats(&formats);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].quality_label.as_deref(), Some("1080p"));
+        assert_eq!(result[1].quality_label.as_deref(), Some("720p"));
     }
 }
