@@ -227,7 +227,7 @@ export function Settings() {
             <button
               type="button"
               role="switch"
-              aria-checked={analyticsEnabled}
+              aria-checked={analyticsEnabled ? "true" : "false"}
               aria-label={t("settings.analytics", "Analytics d'utilisation")}
               onClick={() => handleAnalyticsToggle(!analyticsEnabled)}
               className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
@@ -254,7 +254,7 @@ export function Settings() {
             <button
               type="button"
               role="switch"
-              aria-checked={errorReportingEnabled}
+              aria-checked={errorReportingEnabled ? "true" : "false"}
               aria-label={t("settings.errorReporting", "Rapport de crash")}
               onClick={() => handleErrorReportingToggle(!errorReportingEnabled)}
               className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
