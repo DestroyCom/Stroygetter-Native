@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from "vitest";
 import { trackEvent, trackPageView, trackAppStarted } from "../analytics";
 import { getVersion } from "@tauri-apps/api/app";
 
@@ -20,6 +20,7 @@ describe("trackEvent", () => {
   });
 
   it("does not call umami when VITE_UMAMI_WEBSITE_ID is not set", () => {
+    vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "");
     trackEvent("test_event", { foo: "bar" });
     expect(mockUmami.track).not.toHaveBeenCalled();
   });
@@ -72,7 +73,7 @@ describe("trackAppStarted", () => {
     localStorage.clear();
     vi.stubGlobal("umami", mockUmami);
     vi.clearAllMocks();
-    (getVersion as vi.Mock).mockResolvedValue("1.0.0");
+    (getVersion as Mock).mockResolvedValue("1.0.0");
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -89,7 +90,7 @@ describe("trackAppStarted", () => {
   it("calls umami.track with app_started event when analytics is enabled", async () => {
     vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "test-id");
     localStorage.setItem("stroygetter-dl-settings", JSON.stringify({ analyticsEnabled: true }));
-    (getVersion as vi.Mock).mockResolvedValue("1.0.0");
+    (getVersion as Mock).mockResolvedValue("1.0.0");
 
     await trackAppStarted();
 
@@ -103,7 +104,7 @@ describe("trackAppStarted", () => {
   it("handles getVersion rejection gracefully and uses 'unknown' as version", async () => {
     vi.stubEnv("VITE_UMAMI_WEBSITE_ID", "test-id");
     localStorage.setItem("stroygetter-dl-settings", JSON.stringify({ analyticsEnabled: true }));
-    (getVersion as vi.Mock).mockRejectedValue(new Error("Version fetch failed"));
+    (getVersion as Mock).mockRejectedValue(new Error("Version fetch failed"));
 
     await trackAppStarted();
 
