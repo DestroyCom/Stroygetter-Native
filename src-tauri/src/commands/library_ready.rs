@@ -62,8 +62,9 @@ pub async fn download_library_ready(
     let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
-    let tmp_audio = std::env::temp_dir().join(format!("{}_audio.mp3", safe));
-    let tmp_cover = std::env::temp_dir().join(format!("{}_cover.jpg", safe));
+    let tmp_id = uuid::Uuid::new_v4().simple().to_string();
+    let tmp_audio = std::env::temp_dir().join(format!("stroygetter_{}_{}_audio.mp3", tmp_id, safe));
+    let tmp_cover = std::env::temp_dir().join(format!("stroygetter_{}_{}_cover.jpg", tmp_id, safe));
     let out = dirs::download_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join(format!("{}.mp3", safe));
@@ -109,11 +110,13 @@ pub async fn download_library_ready(
     // Phase 2: download cover image — try primary URL, fall back, proceed without on failure
     emit_progress(&app, "fetching_cover", 0.0);
 
-    let cover_bytes: Option<Vec<u8>> = if !cover_url.is_empty() {
+    let cover_bytes: Option<Vec<u8>> = if !cover_url.is_empty() && validate_url(&cover_url).is_ok() {
         let mut bytes = try_fetch_cover(&cover_url).await;
         if bytes.is_none() {
             if let Some(ref fallback) = cover_url_fallback {
-                bytes = try_fetch_cover(fallback).await;
+                if validate_url(fallback).is_ok() {
+                    bytes = try_fetch_cover(fallback).await;
+                }
             }
         }
         bytes

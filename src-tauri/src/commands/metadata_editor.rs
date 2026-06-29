@@ -47,6 +47,19 @@ pub(crate) fn parse_lrc_line(line: &str) -> Option<(u32, String)> {
     Some((ms, text))
 }
 
+fn validate_path_in_home(path: &str) -> Result<(), String> {
+    let home = dirs::home_dir()
+        .ok_or_else(|| "cannot determine home directory".to_string())?;
+    let canonical = std::path::Path::new(path)
+        .canonicalize()
+        .map_err(|_| "path does not exist or is not accessible".to_string())?;
+    if canonical.starts_with(&home) {
+        Ok(())
+    } else {
+        Err("path must be within your home directory".to_string())
+    }
+}
+
 fn validate_image_path(path: &str) -> Result<(), String> {
     let ext = std::path::Path::new(path)
         .extension()
@@ -74,6 +87,7 @@ fn validate_audio_path(path: &str) -> Result<(), String> {
 #[tauri::command]
 pub fn read_local_image_as_data_url(path: String) -> Result<String, String> {
     validate_image_path(&path)?;
+    validate_path_in_home(&path)?;
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     let mime = mime_from_extension(&path);
     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
@@ -82,6 +96,7 @@ pub fn read_local_image_as_data_url(path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn read_audio_metadata(path: String) -> Result<AudioMetadata, String> {
+    validate_path_in_home(&path)?;
     let tag = match Tag::read_from_path(&path) {
         Ok(t) => t,
         Err(e) if matches!(e.kind, id3::ErrorKind::NoTag) => Tag::new(),
@@ -125,9 +140,16 @@ pub async fn read_audio_metadata(path: String) -> Result<AudioMetadata, String> 
 }
 
 async fn fetch_cover_bytes(url: &str) -> Option<(Vec<u8>, String)> {
-    let res = reqwest::Client::new()
-        .get(url)
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return None;
+    }
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(5))
         .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .ok()?;
+    let res = client
+        .get(url)
         .send()
         .await
         .ok()?;
@@ -181,6 +203,7 @@ pub async fn write_audio_metadata(
     lyrics_lrc: String,
 ) -> Result<(), String> {
     validate_audio_path(&path)?;
+    validate_path_in_home(&path)?;
     let mut tag = Tag::read_from_path(&path).unwrap_or_else(|_| Tag::new());
 
     tag.set_title(&title);

@@ -215,7 +215,7 @@ pub async fn download_video(
     if let Err(e) = video_result { cleanup(); log::error!("download_video: video stream failed — {e}"); return Err(e); }
     if let Err(e) = audio_result { cleanup(); log::error!("download_video: audio stream failed — {e}"); return Err(e); }
 
-    let ffmpeg = get_sidecar_exe("ffmpeg").ok_or_else(|| "ffmpeg not found".to_string())?;
+    let ffmpeg = get_sidecar_exe("ffmpeg").ok_or_else(|| { cleanup(); "ffmpeg not found".to_string() })?;
     log::debug!("download_video: merging → {out_str}");
     let merge = tokio::process::Command::new(&ffmpeg)
         .args(["-i", &video_tmp_str, "-i", &audio_tmp_str,

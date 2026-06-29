@@ -13,7 +13,10 @@
         { "name": "bgutil-pot", "sidecar": true }
       ]
     },
-    "shell:allow-open",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [{ "url": "https://**" }, { "url": "http://**" }]
+    },
     "opener:allow-open-path",
     "dialog:allow-open",
     "log:default"

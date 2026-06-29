@@ -113,7 +113,7 @@ pub async fn fetch_video_info(
     dl_settings: State<'_, DownloadSettingsState>,
     url: String,
 ) -> Result<VideoInfo, String> {
-    let settings = dl_settings.0.lock().unwrap().clone();
+    let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     let mut args = build_common_args(&settings);
     if crate::pot::is_youtube_url(&url) {
         args.extend(build_youtube_args());

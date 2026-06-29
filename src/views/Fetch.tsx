@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -31,7 +31,6 @@ export function Fetch() {
 	const [isDownloading, setIsDownloading] = useState(false);
 	const [progress, setProgress] = useState(0);
 	const [downloadError, setDownloadError] = useState<string | null>(null);
-	const unlistenRef = useRef<Promise<() => void> | null>(null);
 
 	useEffect(() => {
 		if (!url) {
@@ -59,10 +58,18 @@ export function Fetch() {
 	}, [url, navigate]);
 
 	useEffect(() => {
-		const p = onDownloadProgress((p) => setProgress(p.percent));
-		unlistenRef.current = p;
+		let unlisten: (() => void) | null = null;
+		let mounted = true;
+		onDownloadProgress((payload) => setProgress(payload.percent)).then((fn) => {
+			if (mounted) {
+				unlisten = fn;
+			} else {
+				fn();
+			}
+		});
 		return () => {
-			p.then((unlisten) => unlisten());
+			mounted = false;
+			unlisten?.();
 		};
 	}, []);
 
@@ -154,6 +161,8 @@ export function Fetch() {
 					lyricsLrc: meta.lyricsLrc,
 					thumbnail: info.thumbnail,
 				});
+			} else {
+				throw new Error(`Unhandled download format: ${fmt}`);
 			}
 			trackEvent("download_completed", {
 				source,
