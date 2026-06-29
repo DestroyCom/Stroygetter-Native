@@ -667,7 +667,9 @@
     "errorReportingDesc": "Enviar relatórios de falhas automaticamente",
     "debugLogs": "Registros de depuração",
     "debugLogsDesc": "Arquivos stroygetter.log — rotação automática a 5 MB.",
-    "openLogFolder": "Abrir pasta de logs"
+    "openLogFolder": "Abrir pasta de logs",
+    "logLevel": "Nível de log",
+    "logLevelDesc": "Debug: registrar tudo. Info: operações normais. Warn/Error: somente problemas."
   },
   "metadataEditor": {
     "title": "Editor de metadados",

@@ -117,6 +117,12 @@ export const getLogDir = (): Promise<string> =>
     throw e;
   });
 
+export const setLogLevel = (level: string): Promise<void> =>
+  invoke<void>("set_log_level", { level }).catch((e) => {
+    captureIfEnabled(e, { command: "set_log_level" });
+    throw e;
+  });
+
 export const writeAudioMetadata = (args: WriteMetadataArgs): Promise<void> =>
   invoke<void>("write_audio_metadata", {
     path: args.path,

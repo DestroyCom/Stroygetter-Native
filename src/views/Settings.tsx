@@ -4,9 +4,10 @@ import i18n from "i18next";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { trackEvent } from "@/lib/analytics";
-import { detectAvailableBrowsers, getLogDir, updateDownloadSettings } from "@/lib/commands";
+import { detectAvailableBrowsers, getLogDir, setLogLevel, updateDownloadSettings } from "@/lib/commands";
 import { SUPPORTED_LANGS } from "@/lib/i18n";
-import { loadDownloadSettings, saveDownloadSettings } from "@/lib/settings";
+import { loadDownloadSettings, saveDownloadSettings, type LogLevel } from "@/lib/settings";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const BROWSER_LABELS: Record<string, string> = {
   safari: "Safari",
@@ -32,6 +33,7 @@ export function Settings() {
   const [analyticsEnabled, setAnalyticsEnabled] = useState(initial.analyticsEnabled);
   const [errorReportingEnabled, setErrorReportingEnabled] = useState(initial.errorReportingEnabled);
   const [logDir, setLogDir] = useState<string>("");
+  const [logLevel, setLogLevelState] = useState<LogLevel>(initial.logLevel);
 
   useEffect(() => {
     getLogDir().then(setLogDir).catch(() => {});
@@ -64,6 +66,12 @@ export function Settings() {
     trackEvent("error_reporting_toggled", { enabled });
     setErrorReportingEnabled(enabled);
     saveDownloadSettings({ errorReportingEnabled: enabled });
+  };
+
+  const handleLogLevelChange = (level: LogLevel) => {
+    setLogLevelState(level);
+    saveDownloadSettings({ logLevel: level });
+    setLogLevel(level);
   };
 
   const handleLangChange = (code: string) => {
@@ -152,7 +160,7 @@ export function Settings() {
             <button
               type="button"
               role="switch"
-              aria-checked={useCookies ? "true" : "false"}
+              aria-checked={useCookies}
               aria-label={t("settings.useCookies", "Utiliser les cookies du navigateur")}
               onClick={() => handleCookiesToggle(!useCookies)}
               className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
@@ -231,7 +239,7 @@ export function Settings() {
             <button
               type="button"
               role="switch"
-              aria-checked={analyticsEnabled ? "true" : "false"}
+              aria-checked={analyticsEnabled}
               aria-label={t("settings.analytics", "Analytics d'utilisation")}
               onClick={() => handleAnalyticsToggle(!analyticsEnabled)}
               className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
@@ -258,7 +266,7 @@ export function Settings() {
             <button
               type="button"
               role="switch"
-              aria-checked={errorReportingEnabled ? "true" : "false"}
+              aria-checked={errorReportingEnabled}
               aria-label={t("settings.errorReporting", "Rapport de crash")}
               onClick={() => handleErrorReportingToggle(!errorReportingEnabled)}
               className={`relative ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${
@@ -280,7 +288,26 @@ export function Settings() {
         <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/40">
           {t("settings.debugLogs", "Journaux de débogage")}
         </h2>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="mb-2 text-xs font-medium text-white/50">
+              {t("settings.logLevel", "Niveau de log")}
+            </p>
+            <Tabs
+              value={logLevel}
+              onValueChange={(v) => handleLogLevelChange(v as LogLevel)}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="debug" className="flex-1">Debug</TabsTrigger>
+                <TabsTrigger value="info" className="flex-1">Info</TabsTrigger>
+                <TabsTrigger value="warn" className="flex-1">Warn</TabsTrigger>
+                <TabsTrigger value="error" className="flex-1">Error</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <p className="mt-1.5 text-xs text-white/35">
+              {t("settings.logLevelDesc", "Debug : tout logger. Info : opérations normales. Warn/Error : problèmes uniquement.")}
+            </p>
+          </div>
           {logDir && (
             <p className="rounded-xl border border-white/10 bg-white/4 px-4 py-3 font-mono text-xs text-white/70 break-all">
               {logDir}

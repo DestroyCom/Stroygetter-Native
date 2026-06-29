@@ -667,7 +667,9 @@
     "errorReportingDesc": "Envoyer automatiquement les rapports de crash",
     "debugLogs": "Journaux de débogage",
     "debugLogsDesc": "Fichiers stroygetter.log — rotation automatique à 5 MB.",
-    "openLogFolder": "Ouvrir le dossier de logs"
+    "openLogFolder": "Ouvrir le dossier de logs",
+    "logLevel": "Niveau de log",
+    "logLevelDesc": "Debug : tout logger. Info : opérations normales. Warn/Error : problèmes uniquement."
   },
   "metadataEditor": {
     "title": "Éditeur de métadonnées",

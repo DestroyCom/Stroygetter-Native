@@ -136,3 +136,15 @@ pub fn get_log_dir(app: AppHandle) -> String {
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_default()
 }
+
+#[tauri::command]
+pub fn set_log_level(level: String) {
+    let filter = match level.as_str() {
+        "debug" => log::LevelFilter::Debug,
+        "warn"  => log::LevelFilter::Warn,
+        "error" => log::LevelFilter::Error,
+        _       => log::LevelFilter::Info,
+    };
+    log::set_max_level(filter);
+    log::info!("log level set to {level}");
+}

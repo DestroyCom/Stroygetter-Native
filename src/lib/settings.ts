@@ -1,8 +1,11 @@
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
 export interface DownloadSettings {
   useCookies: boolean;
   cookiesBrowser: string;
   analyticsEnabled: boolean;
   errorReportingEnabled: boolean;
+  logLevel: LogLevel;
 }
 
 const KEY = "stroygetter-dl-settings";
@@ -12,6 +15,7 @@ const DEFAULTS: DownloadSettings = {
   cookiesBrowser: "",
   analyticsEnabled: true,
   errorReportingEnabled: true,
+  logLevel: "info",
 };
 
 export function loadDownloadSettings(): DownloadSettings {

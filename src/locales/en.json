@@ -667,7 +667,9 @@
     "errorReportingDesc": "Automatically send crash reports",
     "debugLogs": "Debug logs",
     "debugLogsDesc": "stroygetter.log files — auto-rotated at 5 MB.",
-    "openLogFolder": "Open log folder"
+    "openLogFolder": "Open log folder",
+    "logLevel": "Log level",
+    "logLevelDesc": "Debug: log everything. Info: normal operations. Warn/Error: problems only."
   },
   "metadataEditor": {
     "title": "Metadata Editor",
