@@ -47,8 +47,33 @@ pub(crate) fn parse_lrc_line(line: &str) -> Option<(u32, String)> {
     Some((ms, text))
 }
 
+fn validate_image_path(path: &str) -> Result<(), String> {
+    let ext = std::path::Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+    match ext.as_str() {
+        "jpg" | "jpeg" | "png" | "webp" | "gif" => Ok(()),
+        _ => Err(format!("Unsupported image format: .{ext}")),
+    }
+}
+
+fn validate_audio_path(path: &str) -> Result<(), String> {
+    let ext = std::path::Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+    match ext.as_str() {
+        "mp3" | "flac" | "m4a" | "ogg" | "wav" | "aac" | "opus" => Ok(()),
+        _ => Err(format!("Unsupported audio format: .{ext}")),
+    }
+}
+
 #[tauri::command]
 pub fn read_local_image_as_data_url(path: String) -> Result<String, String> {
+    validate_image_path(&path)?;
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     let mime = mime_from_extension(&path);
     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
@@ -155,6 +180,7 @@ pub async fn write_audio_metadata(
     lyrics_plain: String,
     lyrics_lrc: String,
 ) -> Result<(), String> {
+    validate_audio_path(&path)?;
     let mut tag = Tag::read_from_path(&path).unwrap_or_else(|_| Tag::new());
 
     tag.set_title(&title);
@@ -260,5 +286,39 @@ mod tests {
     fn parse_lrc_strips_whitespace_from_text() {
         let (_, text) = parse_lrc_line("[00:01.00]   spaced  ").unwrap();
         assert_eq!(text, "spaced");
+    }
+
+    #[test]
+    fn validate_image_path_accepts_known_extensions() {
+        assert!(validate_image_path("/tmp/cover.jpg").is_ok());
+        assert!(validate_image_path("/tmp/cover.jpeg").is_ok());
+        assert!(validate_image_path("/tmp/cover.png").is_ok());
+        assert!(validate_image_path("/tmp/cover.webp").is_ok());
+        assert!(validate_image_path("/tmp/COVER.JPG").is_ok());
+    }
+
+    #[test]
+    fn validate_image_path_rejects_non_image_extensions() {
+        assert!(validate_image_path("/etc/passwd").is_err());
+        assert!(validate_image_path("/tmp/script.sh").is_err());
+        assert!(validate_image_path("/tmp/file.txt").is_err());
+        assert!(validate_image_path("/tmp/song.mp3").is_err());
+    }
+
+    #[test]
+    fn validate_audio_path_accepts_known_extensions() {
+        assert!(validate_audio_path("/tmp/song.mp3").is_ok());
+        assert!(validate_audio_path("/tmp/song.flac").is_ok());
+        assert!(validate_audio_path("/tmp/song.m4a").is_ok());
+        assert!(validate_audio_path("/tmp/song.ogg").is_ok());
+        assert!(validate_audio_path("/tmp/song.wav").is_ok());
+        assert!(validate_audio_path("/tmp/SONG.MP3").is_ok());
+    }
+
+    #[test]
+    fn validate_audio_path_rejects_non_audio_extensions() {
+        assert!(validate_audio_path("/etc/hosts").is_err());
+        assert!(validate_audio_path("/tmp/file.exe").is_err());
+        assert!(validate_audio_path("/tmp/cover.jpg").is_err());
     }
 }
