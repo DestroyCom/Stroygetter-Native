@@ -169,7 +169,7 @@ pub async fn download_video(
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
-    let settings = dl_settings.0.lock().unwrap().clone();
+    let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
     let out = unique_path(&downloads_dir().join(format!("{}.mp4", safe)));
@@ -217,11 +217,12 @@ pub async fn download_video(
 
     let ffmpeg = get_sidecar_exe("ffmpeg").ok_or_else(|| "ffmpeg not found".to_string())?;
     log::debug!("download_video: merging → {out_str}");
-    let merge = std::process::Command::new(&ffmpeg)
+    let merge = tokio::process::Command::new(&ffmpeg)
         .args(["-i", &video_tmp_str, "-i", &audio_tmp_str,
                "-map", "0:v", "-map", "1:a", "-c", "copy", "-y", &out_str])
         .output()
-        .map_err(|e| { cleanup(); e.to_string() })?;
+        .await
+        .map_err(|e| e.to_string())?;
     cleanup();
 
     if !merge.status.success() {
@@ -248,7 +249,7 @@ pub async fn download_audio(
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
-    let settings = dl_settings.0.lock().unwrap().clone();
+    let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
     let out = unique_path(&downloads_dir().join(format!("{}.mp3", safe)));
@@ -298,7 +299,7 @@ pub async fn download_tiktok(
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
-    let settings = dl_settings.0.lock().unwrap().clone();
+    let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
     let ext = if audio_only { "mp3" } else { "mp4" };
@@ -358,7 +359,7 @@ pub async fn download_twitch(
     author: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
-    let settings = dl_settings.0.lock().unwrap().clone();
+    let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     validate_format_id(&format_id)?;
     let safe = sanitize(&title);
