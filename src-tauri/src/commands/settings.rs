@@ -16,17 +16,75 @@ impl Default for DownloadSettings {
 
 pub struct DownloadSettingsState(pub std::sync::Mutex<DownloadSettings>);
 
-/// Builds the yt-dlp args that apply to every call (player_client + optional cookies).
-pub fn build_common_args(settings: &DownloadSettings) -> Vec<String> {
-    let mut args = vec![
-        "--add-header".to_string(), "referer:youtube.com".to_string(),
-        "--add-header".to_string(), "user-agent:googlebot".to_string(),
+fn find_in_path(bin: &str) -> Option<std::path::PathBuf> {
+    let path_var = std::env::var_os("PATH")?;
+    let extensions: Vec<String> = if cfg!(windows) {
+        std::env::var("PATHEXT")
+            .unwrap_or_default()
+            .split(';')
+            .map(|e| e.to_lowercase())
+            .collect()
+    } else {
+        vec![String::new()]
+    };
+    for dir in std::env::split_paths(&path_var) {
+        for ext in &extensions {
+            let candidate = dir.join(format!("{}{}", bin, ext));
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+fn detect_js_runtime() -> Option<(&'static str, String)> {
+    let candidates: &[(&str, &[&str])] = &[
+        ("deno", &["deno"]),
+        ("node", &["node", "nodejs"]),
+        ("quickjs", &["qjs"]),
     ];
+    for (runtime, bins) in candidates {
+        for bin in *bins {
+            if let Some(path) = find_in_path(bin) {
+                return Some((runtime, path.to_string_lossy().into_owned()));
+            }
+        }
+    }
+    None
+}
+
+/// Args applicable to every yt-dlp call regardless of source (cookies only).
+pub fn build_common_args(settings: &DownloadSettings) -> Vec<String> {
+    let mut args = vec![];
     if settings.use_cookies && !settings.cookies_browser.is_empty() {
         args.extend([
             "--cookies-from-browser".to_string(),
             settings.cookies_browser.clone(),
         ]);
+    }
+    args
+}
+
+/// Extra args for YouTube only: spoofed headers + JS runtime for challenge solving.
+pub fn build_youtube_args() -> Vec<String> {
+    let mut args = vec![
+        "--add-header".to_string(), "referer:youtube.com".to_string(),
+        "--add-header".to_string(), "user-agent:googlebot".to_string(),
+    ];
+    match detect_js_runtime() {
+        Some((runtime, path)) => {
+            args.extend([
+                "--js-runtimes".to_string(),
+                format!("{}:{}", runtime, path),
+            ]);
+        }
+        None => {
+            args.extend([
+                "--remote-components".to_string(),
+                "ejs:github".to_string(),
+            ]);
+        }
     }
     args
 }

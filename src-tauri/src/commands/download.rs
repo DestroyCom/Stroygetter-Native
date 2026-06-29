@@ -1,4 +1,4 @@
-use crate::commands::settings::{build_common_args, DownloadSettingsState};
+use crate::commands::settings::{build_common_args, build_youtube_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
 use serde::Serialize;
@@ -111,7 +111,7 @@ async fn run_with_progress(
         }
     });
 
-    // Prepend common args (player_client + optional cookies).
+    // Prepend common args (cookies only — YouTube-specific headers added separately).
     let mut all_args = build_common_args(dl_settings);
     all_args.extend(args);
 
@@ -160,11 +160,13 @@ pub async fn download_video(
         None
     };
 
-    let mut video_args = vec!["-f".to_string(), itag.clone()];
+    let mut video_args = build_youtube_args();
+    video_args.extend(["-f".to_string(), itag.clone()]);
     if let Some(ref t) = token { video_args.extend(crate::pot::build_pot_args(t)); }
     video_args.extend(["-o".to_string(), video_tmp_str.clone(), url.clone()]);
 
-    let mut audio_args = vec!["-f".to_string(), "ba[ext=m4a]/ba[acodec^=mp4a]/ba".to_string()];
+    let mut audio_args = build_youtube_args();
+    audio_args.extend(["-f".to_string(), "ba[ext=m4a]/ba[acodec^=mp4a]/ba".to_string()]);
     if let Some(ref t) = token { audio_args.extend(crate::pot::build_pot_args(t)); }
     audio_args.extend(["-o".to_string(), audio_tmp_str.clone(), url.clone()]);
 
@@ -222,11 +224,12 @@ pub async fn download_audio(
     let out = unique_path(&downloads_dir().join(format!("{}.mp3", safe)));
     let out_str = out.to_string_lossy().to_string();
 
-    let mut args = vec![
+    let mut args = build_youtube_args();
+    args.extend([
         "-x".to_string(),
         "--audio-format".to_string(), "mp3".to_string(),
         "--audio-quality".to_string(), "192K".to_string(),
-    ];
+    ]);
     if crate::pot::is_youtube_url(&url) {
         if let Some(token) = crate::pot::get_po_token(&app, &url).await {
             args.extend(crate::pot::build_pot_args(&token));

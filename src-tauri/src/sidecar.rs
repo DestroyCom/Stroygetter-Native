@@ -43,7 +43,11 @@ pub async fn run_sidecar(
             }
             CommandEvent::Stderr(line) => {
                 let text = String::from_utf8_lossy(&line).to_string();
-                log::warn!("[{name}] {text}");
+                if text.trim_start().starts_with("ERROR:") {
+                    log::error!("[{name}] {text}");
+                } else {
+                    log::debug!("[{name}] {text}");
+                }
                 if let Some(tx) = &progress_tx {
                     let _ = tx.send(text.clone()).await;
                 }
