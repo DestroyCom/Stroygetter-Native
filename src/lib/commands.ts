@@ -1,6 +1,6 @@
+import * as Sentry from "@sentry/react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import * as Sentry from "@sentry/react";
 import type { DownloadSettings } from "./settings";
 import { loadDownloadSettings } from "./settings";
 import type { AudioMetadata, DownloadProgress, DownloadRecord, VideoInfo, WriteMetadataArgs } from "./types";
@@ -114,6 +114,12 @@ export const readAudioMetadata = (path: string): Promise<AudioMetadata> =>
 export const getLogDir = (): Promise<string> =>
   invoke<string>("get_log_dir").catch((e) => {
     captureIfEnabled(e, { command: "get_log_dir" });
+    throw e;
+  });
+
+export const openLogDir = (): Promise<void> =>
+  invoke<void>("open_log_dir").catch((e) => {
+    captureIfEnabled(e, { command: "open_log_dir" });
     throw e;
   });
 

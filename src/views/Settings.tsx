@@ -4,7 +4,7 @@ import i18n from "i18next";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { trackEvent } from "@/lib/analytics";
-import { detectAvailableBrowsers, getLogDir, setLogLevel, updateDownloadSettings } from "@/lib/commands";
+import { detectAvailableBrowsers, getLogDir, openLogDir, setLogLevel, updateDownloadSettings } from "@/lib/commands";
 import { SUPPORTED_LANGS } from "@/lib/i18n";
 import { loadDownloadSettings, saveDownloadSettings, type LogLevel } from "@/lib/settings";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -315,7 +315,7 @@ export function Settings() {
           )}
           <button
             type="button"
-            onClick={() => logDir && openUrl(logDir)}
+            onClick={() => openLogDir()}
             disabled={!logDir}
             className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-40"
           >

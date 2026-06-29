@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_shell::ShellExt;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DownloadSettings {
@@ -135,6 +136,14 @@ pub fn get_log_dir(app: AppHandle) -> String {
         .app_log_dir()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_default()
+}
+
+#[tauri::command]
+pub fn open_log_dir(app: AppHandle) -> Result<(), String> {
+    let log_dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
+    app.shell()
+        .open(log_dir.to_string_lossy().as_ref(), None)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
