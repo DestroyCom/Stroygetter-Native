@@ -1,6 +1,8 @@
 export interface DownloadSettings {
   useCookies: boolean;
   cookiesBrowser: string;
+  analyticsEnabled: boolean;
+  errorReportingEnabled: boolean;
 }
 
 const KEY = "stroygetter-dl-settings";
@@ -8,6 +10,8 @@ const KEY = "stroygetter-dl-settings";
 const DEFAULTS: DownloadSettings = {
   useCookies: false,
   cookiesBrowser: "",
+  analyticsEnabled: true,
+  errorReportingEnabled: true,
 };
 
 export function loadDownloadSettings(): DownloadSettings {
