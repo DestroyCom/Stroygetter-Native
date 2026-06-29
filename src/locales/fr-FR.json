@@ -641,7 +641,8 @@
     "noDownloads": "Aucun téléchargement",
     "settings": "Paramètres",
     "metadata": "Éditeur de Métadonnées",
-    "editMetadata": "Modifier les métadonnées"
+    "editMetadata": "Modifier les métadonnées",
+    "updates": "Mises à jour"
   },
   "settings": {
     "title": "Paramètres",
@@ -669,7 +670,12 @@
     "debugLogsDesc": "Fichiers stroygetter.log — rotation automatique à 5 MB.",
     "openLogFolder": "Ouvrir le dossier de logs",
     "logLevel": "Niveau de log",
-    "logLevelDesc": "Debug : tout logger. Info : opérations normales. Warn/Error : problèmes uniquement."
+    "logLevelDesc": "Debug : tout logger. Info : opérations normales. Warn/Error : problèmes uniquement.",
+    "history": "Historique",
+    "clearHistoryDesc": "Supprime tous les téléchargements de l'historique. Les fichiers ne sont pas supprimés.",
+    "clearHistoryButton": "Vider l'historique",
+    "clearHistoryConfirm": "Confirmer la suppression",
+    "clearHistoryDone": "Historique vidé"
   },
   "metadataEditor": {
     "title": "Éditeur de métadonnées",

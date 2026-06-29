@@ -64,6 +64,11 @@ pub fn insert(conn: &Connection, record: &DownloadRecord) -> Result<()> {
     Ok(())
 }
 
+pub fn clear_history(conn: &Connection) -> Result<()> {
+    conn.execute("DELETE FROM downloads", [])?;
+    Ok(())
+}
+
 pub fn get_history(conn: &Connection) -> Result<Vec<DownloadRecord>> {
     let mut stmt = conn.prepare(
         "SELECT id, url, title, author, thumbnail_url, format, file_path, MAX(created_at) as created_at

@@ -23,6 +23,12 @@ export const getHistory = (): Promise<DownloadRecord[]> =>
     throw e;
   });
 
+export const clearHistory = (): Promise<void> =>
+  invoke<void>("clear_history").catch((e) => {
+    captureIfEnabled(e, { command: "clear_history" });
+    throw e;
+  });
+
 export const downloadVideo = (
   url: string, itag: string, title: string, author: string, thumbnail?: string
 ): Promise<string> =>

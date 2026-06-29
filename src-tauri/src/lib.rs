@@ -57,6 +57,12 @@ fn get_history(db: tauri::State<DbConn>) -> Result<Vec<db::DownloadRecord>, Stri
     db::get_history(&conn).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn clear_history(db: tauri::State<DbConn>) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    db::clear_history(&conn).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _sentry = init_sentry();
@@ -88,6 +94,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_history,
+            clear_history,
             commands::info::fetch_video_info,
             commands::download::download_video,
             commands::download::download_audio,

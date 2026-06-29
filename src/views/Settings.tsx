@@ -4,7 +4,7 @@ import i18n from "i18next";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { trackEvent } from "@/lib/analytics";
-import { detectAvailableBrowsers, getLogDir, openLogDir, setLogLevel, updateDownloadSettings } from "@/lib/commands";
+import { clearHistory, detectAvailableBrowsers, getLogDir, openLogDir, setLogLevel, updateDownloadSettings } from "@/lib/commands";
 import { SUPPORTED_LANGS } from "@/lib/i18n";
 import { loadDownloadSettings, saveDownloadSettings, type LogLevel } from "@/lib/settings";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +34,8 @@ export function Settings() {
   const [errorReportingEnabled, setErrorReportingEnabled] = useState(initial.errorReportingEnabled);
   const [logDir, setLogDir] = useState<string>("");
   const [logLevel, setLogLevelState] = useState<LogLevel>(initial.logLevel);
+  const [clearConfirm, setClearConfirm] = useState(false);
+  const [clearDone, setClearDone] = useState(false);
 
   useEffect(() => {
     getLogDir().then(setLogDir).catch(() => {});
@@ -72,6 +74,23 @@ export function Settings() {
     setLogLevelState(level);
     saveDownloadSettings({ logLevel: level });
     setLogLevel(level);
+  };
+
+  const handleClearHistory = async () => {
+    if (!clearConfirm) {
+      setClearConfirm(true);
+      return;
+    }
+    try {
+      await clearHistory();
+      window.dispatchEvent(new Event("history-cleared"));
+      trackEvent("history_cleared");
+      setClearDone(true);
+      setClearConfirm(false);
+      setTimeout(() => setClearDone(false), 3000);
+    } catch {
+      setClearConfirm(false);
+    }
   };
 
   const handleLangChange = (code: string) => {
@@ -280,6 +299,46 @@ export function Settings() {
               />
             </button>
           </label>
+        </div>
+      </section>
+
+      {/* History */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/40">
+          {t("settings.history", "Historique")}
+        </h2>
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-white/35">
+            {t("settings.clearHistoryDesc", "Supprime tous les téléchargements de l'historique. Les fichiers ne sont pas supprimés.")}
+          </p>
+          {clearDone ? (
+            <p className="rounded-xl border border-green-500/30 bg-green-500/8 px-4 py-3 text-sm font-medium text-green-400">
+              {t("settings.clearHistoryDone", "Historique vidé")}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleClearHistory}
+              className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                clearConfirm
+                  ? "border-red-500/50 bg-red-500/15 text-red-400 hover:bg-red-500/25"
+                  : "border-white/10 bg-white/6 text-white/70 hover:border-white/20 hover:text-white"
+              }`}
+            >
+              {clearConfirm
+                ? t("settings.clearHistoryConfirm", "Confirmer la suppression")
+                : t("settings.clearHistoryButton", "Vider l'historique")}
+            </button>
+          )}
+          {clearConfirm && (
+            <button
+              type="button"
+              onClick={() => setClearConfirm(false)}
+              className="text-xs text-white/35 hover:text-white/60 transition-colors"
+            >
+              {t("common.cancel", "Annuler")}
+            </button>
+          )}
         </div>
       </section>
 

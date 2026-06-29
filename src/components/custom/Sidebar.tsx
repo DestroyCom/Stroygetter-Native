@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Film, Plus, Settings, Tag } from "lucide-react";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { Film, Globe, Plus, Settings, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -16,7 +17,24 @@ export function Sidebar() {
 
   useEffect(() => {
     getHistory().then(setHistory).catch(() => {});
-  }, []); // Load once on mount
+    const onCleared = () => getHistory().then(setHistory).catch(() => {});
+    window.addEventListener("history-cleared", onCleared);
+    return () => window.removeEventListener("history-cleared", onCleared);
+  }, []);
+
+  const openBlog = async () => {
+    const existing = await WebviewWindow.getByLabel("blog");
+    if (existing) {
+      existing.setFocus();
+      return;
+    }
+    new WebviewWindow("blog", {
+      url: "https://stroygetter.fr/fr-FR/updates",
+      title: "StroyGetter — Mises à jour",
+      width: 1100,
+      height: 750,
+    });
+  };
 
   return (
     <aside className="flex h-screen w-[220px] shrink-0 flex-col border-r border-white/8 bg-stroy-900">
@@ -78,7 +96,7 @@ export function Sidebar() {
         ))}
       </div>
 
-      {/* Metadata + Settings */}
+      {/* Metadata + Updates + Settings */}
       <div className="border-t border-white/8 px-3 py-3 flex flex-col gap-1">
         <button
           type="button"
@@ -92,6 +110,14 @@ export function Sidebar() {
         >
           <Tag size={15} />
           {t("sidebar.metadata", "Metadata")}
+        </button>
+        <button
+          type="button"
+          onClick={openBlog}
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/6 hover:text-white"
+        >
+          <Globe size={15} />
+          {t("sidebar.updates", "Mises à jour")}
         </button>
         <button
           type="button"

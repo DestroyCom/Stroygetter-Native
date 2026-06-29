@@ -641,7 +641,8 @@
     "noDownloads": "No downloads",
     "settings": "Settings",
     "metadata": "Metadata Editor",
-    "editMetadata": "Edit metadata"
+    "editMetadata": "Edit metadata",
+    "updates": "Updates"
   },
   "settings": {
     "title": "Settings",
@@ -669,7 +670,12 @@
     "debugLogsDesc": "stroygetter.log files — auto-rotated at 5 MB.",
     "openLogFolder": "Open log folder",
     "logLevel": "Log level",
-    "logLevelDesc": "Debug: log everything. Info: normal operations. Warn/Error: problems only."
+    "logLevelDesc": "Debug: log everything. Info: normal operations. Warn/Error: problems only.",
+    "history": "History",
+    "clearHistoryDesc": "Removes all downloads from history. Files are not deleted.",
+    "clearHistoryButton": "Clear history",
+    "clearHistoryConfirm": "Confirm deletion",
+    "clearHistoryDone": "History cleared"
   },
   "metadataEditor": {
     "title": "Metadata Editor",
