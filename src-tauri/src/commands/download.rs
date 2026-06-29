@@ -23,6 +23,25 @@ fn downloads_dir() -> std::path::PathBuf {
     dirs::download_dir().unwrap_or_else(|| std::path::PathBuf::from("."))
 }
 
+fn unique_path(base: &std::path::Path) -> std::path::PathBuf {
+    if !base.exists() {
+        return base.to_path_buf();
+    }
+    let stem = base.file_stem().unwrap_or_default().to_string_lossy().to_string();
+    let ext = base.extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
+    let dir = base.parent().unwrap_or(std::path::Path::new("."));
+    let mut i = 1u32;
+    loop {
+        let candidate = dir.join(format!("{} ({}){}", stem, i, ext));
+        if !candidate.exists() {
+            return candidate;
+        }
+        i += 1;
+    }
+}
+
 fn sanitize(title: &str) -> String {
     title
         .chars()
@@ -125,7 +144,7 @@ pub async fn download_video(
 ) -> Result<String, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
     let safe = sanitize(&title);
-    let out = downloads_dir().join(format!("{}.mp4", safe));
+    let out = unique_path(&downloads_dir().join(format!("{}.mp4", safe)));
     let out_str = out.to_string_lossy().to_string();
 
     // {0}+bestaudio: DASH video-only itag merged with audio (ideal path)
@@ -135,7 +154,6 @@ pub async fn download_video(
     let mut args = vec![
         "-f".to_string(), format_str,
         "--merge-output-format".to_string(), "mp4".to_string(),
-        "--force-overwrites".to_string(),
     ];
     if crate::pot::is_youtube_url(&url) {
         if let Some(token) = crate::pot::get_po_token(&app, &url).await {
@@ -175,14 +193,13 @@ pub async fn download_audio(
 ) -> Result<String, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
     let safe = sanitize(&title);
-    let out = downloads_dir().join(format!("{}.mp3", safe));
+    let out = unique_path(&downloads_dir().join(format!("{}.mp3", safe)));
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = vec![
         "-x".to_string(),
         "--audio-format".to_string(), "mp3".to_string(),
         "--audio-quality".to_string(), "192K".to_string(),
-        "--force-overwrites".to_string(),
     ];
     if crate::pot::is_youtube_url(&url) {
         if let Some(token) = crate::pot::get_po_token(&app, &url).await {
