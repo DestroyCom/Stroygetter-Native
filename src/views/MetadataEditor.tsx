@@ -302,6 +302,7 @@ export function MetadataEditor() {
 											result_position: index,
 										});
 									}
+									setSelectedCoverPath(null);
 									setSelectedCoverUrl((prev) =>
 										prev === r.artworkUrl ? null : r.artworkUrl,
 									);

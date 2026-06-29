@@ -138,7 +138,10 @@ export function Fetch() {
 					info.thumbnail,
 				);
 			} else if (fmt === "library-ready") {
-				const videoId = url.match(/[?&]v=([^&]+)/)?.[1] ?? "";
+				const videoId =
+					url.match(/[?&]v=([^&]+)/)?.[1] ??
+					url.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)?.[1] ??
+					"";
 				const meta = await resolveLibraryReadyMetadata(info.title, videoId);
 				await downloadLibraryReady({
 					url,
