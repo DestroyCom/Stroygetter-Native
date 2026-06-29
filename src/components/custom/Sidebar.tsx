@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { invoke } from "@tauri-apps/api/core";
 import { Film, Globe, Plus, Settings, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -22,19 +22,7 @@ export function Sidebar() {
     return () => window.removeEventListener("history-cleared", onCleared);
   }, []);
 
-  const openBlog = async () => {
-    const existing = await WebviewWindow.getByLabel("blog");
-    if (existing) {
-      existing.setFocus();
-      return;
-    }
-    new WebviewWindow("blog", {
-      url: "https://stroygetter.fr/fr-FR/updates",
-      title: "StroyGetter — Mises à jour",
-      width: 1100,
-      height: 750,
-    });
-  };
+  const openBlog = () => invoke("open_blog").catch(() => {});
 
   return (
     <aside className="flex h-screen w-[220px] shrink-0 flex-col border-r border-white/8 bg-stroy-900">

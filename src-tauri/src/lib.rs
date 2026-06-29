@@ -63,6 +63,22 @@ fn clear_history(db: tauri::State<DbConn>) -> Result<(), String> {
     db::clear_history(&conn).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn open_blog(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("blog") {
+        win.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    let blog_url = url::Url::parse("https://stroygetter.fr/fr-FR/updates")
+        .map_err(|e| e.to_string())?;
+    tauri::WebviewWindowBuilder::new(&app, "blog", tauri::WebviewUrl::External(blog_url))
+        .title("StroyGetter — Mises à jour")
+        .inner_size(1100.0, 750.0)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _sentry = init_sentry();
@@ -95,6 +111,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_history,
             clear_history,
+            open_blog,
             commands::info::fetch_video_info,
             commands::download::download_video,
             commands::download::download_audio,
