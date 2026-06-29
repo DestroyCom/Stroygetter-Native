@@ -147,33 +147,59 @@ pub async fn download_video(
     let out = unique_path(&downloads_dir().join(format!("{}.mp4", safe)));
     let out_str = out.to_string_lossy().to_string();
 
-    // {0}+bestaudio: DASH video-only itag merged with audio (ideal path)
-    // {0}: muxed itag as-is (fallback when itag already has audio)
-    // bestvideo+bestaudio/best: last-resort when the specific itag is unavailable
-    let format_str = format!("{0}+bestaudio[ext=m4a]/{0}+bestaudio/{0}/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best", itag);
-    let mut args = vec![
-        "-f".to_string(), format_str,
-        "--merge-output-format".to_string(), "mp4".to_string(),
-    ];
-    if crate::pot::is_youtube_url(&url) {
-        if let Some(token) = crate::pot::get_po_token(&app, &url).await {
-            args.extend(crate::pot::build_pot_args(&token));
-        }
-    }
-    if let Some(ffmpeg) = get_sidecar_exe("ffmpeg") {
-        args.push("--ffmpeg-location".to_string());
-        args.push(ffmpeg);
-    }
-    args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
+    let tmp = std::env::temp_dir();
+    let video_tmp = tmp.join(format!("{}_video.mp4", safe));
+    let audio_tmp = tmp.join(format!("{}_audio.m4a", safe));
+    let video_tmp_str = video_tmp.to_string_lossy().to_string();
+    let audio_tmp_str = audio_tmp.to_string_lossy().to_string();
 
-    log::info!("download_video: start url={url} itag={itag} title={title:?}");
-    let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
-    if let Err(ref e) = result {
-        log::error!("download_video: failed — {e}");
-        return Err(e.clone());
+    // PO token fetched once, reused for both streams
+    let token = if crate::pot::is_youtube_url(&url) {
+        crate::pot::get_po_token(&app, &url).await
+    } else {
+        None
+    };
+
+    let mut video_args = vec!["-f".to_string(), itag.clone()];
+    if let Some(ref t) = token { video_args.extend(crate::pot::build_pot_args(t)); }
+    video_args.extend(["-o".to_string(), video_tmp_str.clone(), url.clone()]);
+
+    let mut audio_args = vec!["-f".to_string(), "ba[ext=m4a]/ba[acodec^=mp4a]/ba".to_string()];
+    if let Some(ref t) = token { audio_args.extend(crate::pot::build_pot_args(t)); }
+    audio_args.extend(["-o".to_string(), audio_tmp_str.clone(), url.clone()]);
+
+    log::info!("download_video: start parallel url={url} itag={itag} title={title:?}");
+
+    let app2 = app.clone();
+    let settings2 = settings.clone();
+    let (video_result, audio_result) = tokio::join!(
+        run_with_progress(&app,  "yt-dlp", video_args, "video", &settings),
+        run_with_progress(&app2, "yt-dlp", audio_args, "audio", &settings2),
+    );
+
+    let cleanup = || {
+        let _ = std::fs::remove_file(&video_tmp);
+        let _ = std::fs::remove_file(&audio_tmp);
+    };
+    if let Err(e) = video_result { cleanup(); log::error!("download_video: video stream failed — {e}"); return Err(e); }
+    if let Err(e) = audio_result { cleanup(); log::error!("download_video: audio stream failed — {e}"); return Err(e); }
+
+    let ffmpeg = get_sidecar_exe("ffmpeg").ok_or_else(|| "ffmpeg not found".to_string())?;
+    log::debug!("download_video: merging → {out_str}");
+    let merge = std::process::Command::new(&ffmpeg)
+        .args(["-i", &video_tmp_str, "-i", &audio_tmp_str,
+               "-map", "0:v", "-map", "1:a", "-c", "copy", "-y", &out_str])
+        .output()
+        .map_err(|e| e.to_string())?;
+    cleanup();
+
+    if !merge.status.success() {
+        let err = String::from_utf8_lossy(&merge.stderr).to_string();
+        log::error!("download_video: ffmpeg merge failed — {err}");
+        return Err(format!("ffmpeg merge failed: {err}"));
     }
+
     log::info!("download_video: complete → {out_str}");
-
     let db = app.state::<DbConn>();
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     db::insert(&conn, &record_from(&url, &title, &author, thumbnail.as_deref(), "mp4", &out_str))

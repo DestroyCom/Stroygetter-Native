@@ -18,19 +18,14 @@ pub struct DownloadSettingsState(pub std::sync::Mutex<DownloadSettings>);
 
 /// Builds the yt-dlp args that apply to every call (player_client + optional cookies).
 pub fn build_common_args(settings: &DownloadSettings) -> Vec<String> {
-    let mut args = vec![];
+    let mut args = vec![
+        "--add-header".to_string(), "referer:youtube.com".to_string(),
+        "--add-header".to_string(), "user-agent:googlebot".to_string(),
+    ];
     if settings.use_cookies && !settings.cookies_browser.is_empty() {
-        // Authenticated browser session → use web client (more authentic, less throttled).
         args.extend([
-            "--extractor-args".to_string(),
-            "youtube:player_client=web".to_string(),
             "--cookies-from-browser".to_string(),
             settings.cookies_browser.clone(),
-        ]);
-    } else {
-        args.extend([
-            "--extractor-args".to_string(),
-            "youtube:player_client=web,android".to_string(),
         ]);
     }
     args
