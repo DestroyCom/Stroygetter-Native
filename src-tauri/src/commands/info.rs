@@ -27,6 +27,7 @@ struct YtDlpFormat {
     format_id: Option<String>,
     height: Option<f64>,
     vcodec: Option<String>,
+    acodec: Option<String>,
     format_note: Option<String>,
 }
 
@@ -52,14 +53,14 @@ fn detect_source(url: &str) -> &'static str {
     }
 }
 
-fn parse_youtube_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
+fn collect_formats_by_filter<F>(formats: &[YtDlpFormat], predicate: F) -> Vec<FormatEntry>
+where
+    F: Fn(&YtDlpFormat) -> bool,
+{
     let mut seen = std::collections::HashSet::new();
-    let mut result = formats
+    let mut result: Vec<FormatEntry> = formats
         .iter()
-        .filter(|f| {
-            f.vcodec.as_deref() != Some("none")
-                && f.height.map(|h| h >= 144.0).unwrap_or(false)
-        })
+        .filter(|f| predicate(f) && f.height.map(|h| h >= 144.0).unwrap_or(false))
         .filter_map(|f| {
             let h = f.height? as u32;
             if seen.insert(h) {
@@ -72,13 +73,28 @@ fn parse_youtube_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
                 None
             }
         })
-        .collect::<Vec<_>>();
+        .collect();
     result.sort_by(|a, b| {
         let ha: u32 = a.quality_label.as_deref().unwrap_or("0").trim_end_matches('p').parse().unwrap_or(0);
         let hb: u32 = b.quality_label.as_deref().unwrap_or("0").trim_end_matches('p').parse().unwrap_or(0);
         hb.cmp(&ha)
     });
     result
+}
+
+fn parse_youtube_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
+    // Prefer DASH video-only H.264 streams (same approach as web version).
+    // These give the full quality range (720p, 1080p+) when YouTube returns DASH manifests.
+    let dash = collect_formats_by_filter(formats, |f| {
+        f.vcodec.as_deref().map(|v| v.starts_with("avc")).unwrap_or(false)
+            && f.acodec.as_deref() == Some("none")
+    });
+    if !dash.is_empty() {
+        return dash;
+    }
+    // Fallback: any video stream (covers muxed progressive formats when DASH is unavailable,
+    // e.g. when YouTube restricts the format list due to missing po_token).
+    collect_formats_by_filter(formats, |f| f.vcodec.as_deref() != Some("none"))
 }
 
 fn parse_twitch_formats(formats: &[YtDlpFormat]) -> Vec<FormatEntry> {
@@ -101,7 +117,13 @@ pub async fn fetch_video_info(
 ) -> Result<VideoInfo, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
     let mut args = build_common_args(&settings);
-    args.extend(["--dump-json".to_string(), "--no-playlist".to_string(), url.clone()]);
+    args.extend([
+        "--add-header".to_string(), "referer:youtube.com".to_string(),
+        "--add-header".to_string(), "user-agent:googlebot".to_string(),
+        "--dump-json".to_string(),
+        "--no-playlist".to_string(),
+        url.clone(),
+    ]);
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     let output = sidecar::run_sidecar(&app, "yt-dlp", &args_ref, None).await?;
 
@@ -147,23 +169,39 @@ mod tests {
         assert_eq!(detect_source("https://clips.twitch.tv/abc"), "twitch");
     }
 
-    #[test]
-    fn parse_youtube_formats_filters_audio_only() {
-        let formats = vec![
-            YtDlpFormat { format_id: Some("137".to_string()), height: Some(1080.0), vcodec: Some("avc1".to_string()), format_note: None },
-            YtDlpFormat { format_id: Some("140".to_string()), height: None, vcodec: Some("none".to_string()), format_note: None },
-        ];
-        let result = parse_youtube_formats(&formats);
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].itag.as_deref(), Some("137"));
+    fn fmt(id: &str, h: Option<f64>, vcodec: &str, acodec: Option<&str>) -> YtDlpFormat {
+        YtDlpFormat {
+            format_id: Some(id.to_string()),
+            height: h,
+            vcodec: Some(vcodec.to_string()),
+            acodec: acodec.map(|s| s.to_string()),
+            format_note: None,
+        }
     }
 
     #[test]
-    fn parse_youtube_formats_includes_below_360p() {
+    fn parse_youtube_formats_prefers_dash_video_only() {
+        // 137/136 are DASH video-only (acodec="none"), 18 is muxed progressive
         let formats = vec![
-            YtDlpFormat { format_id: Some("18".to_string()), height: Some(360.0), vcodec: Some("avc1".to_string()), format_note: None },
-            YtDlpFormat { format_id: Some("133".to_string()), height: Some(240.0), vcodec: Some("avc1".to_string()), format_note: None },
-            YtDlpFormat { format_id: Some("160".to_string()), height: Some(144.0), vcodec: Some("avc1".to_string()), format_note: None },
+            fmt("137", Some(1080.0), "avc1.640028", Some("none")),
+            fmt("136", Some(720.0),  "avc1.4d401f", Some("none")),
+            fmt("18",  Some(360.0),  "avc1.42001E", Some("mp4a.40.2")),
+            fmt("140", None,         "none",         Some("mp4a.40.2")),
+        ];
+        let result = parse_youtube_formats(&formats);
+        // DASH path: 1080p and 720p, muxed 360p excluded because DASH path was taken
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].quality_label.as_deref(), Some("1080p"));
+        assert_eq!(result[1].quality_label.as_deref(), Some("720p"));
+    }
+
+    #[test]
+    fn parse_youtube_formats_fallback_when_no_dash() {
+        // Only muxed progressive formats available (e.g. YouTube restricts DASH)
+        let formats = vec![
+            fmt("18",  Some(360.0), "avc1.42001E", Some("mp4a.40.2")),
+            fmt("133", Some(240.0), "avc1.42001E", Some("mp4a.40.2")),
+            fmt("160", Some(144.0), "avc1.42001E", Some("mp4a.40.2")),
         ];
         let result = parse_youtube_formats(&formats);
         assert_eq!(result.len(), 3);
@@ -175,8 +213,8 @@ mod tests {
     #[test]
     fn parse_youtube_formats_handles_float_height() {
         let formats = vec![
-            YtDlpFormat { format_id: Some("137".to_string()), height: Some(1080.0), vcodec: Some("avc1".to_string()), format_note: None },
-            YtDlpFormat { format_id: Some("136".to_string()), height: Some(720.0), vcodec: Some("avc1".to_string()), format_note: None },
+            fmt("137", Some(1080.0), "avc1.640028", Some("none")),
+            fmt("136", Some(720.0),  "avc1.4d401f", Some("none")),
         ];
         let result = parse_youtube_formats(&formats);
         assert_eq!(result.len(), 2);
