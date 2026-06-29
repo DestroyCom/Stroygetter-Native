@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { Sidebar } from "@/components/custom/Sidebar";
@@ -9,6 +9,15 @@ import { Fetch } from "@/views/Fetch";
 import { Settings } from "@/views/Settings";
 import { MetadataEditor } from "@/views/MetadataEditor";
 import { checkForUpdate, RELEASES_PAGE } from "@/lib/updater";
+import { trackPageView } from "@/lib/analytics";
+
+function NavigationTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView();
+  }, [location.pathname]);
+  return null;
+}
 
 function UpdateBanner({ version, url, onDismiss }: { version: string; url: string; onDismiss: () => void }) {
   return (
@@ -58,6 +67,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <NavigationTracker />
       <div className="flex h-screen flex-col overflow-hidden bg-stroy-950 text-white">
         {updateVersion && (
           <UpdateBanner
