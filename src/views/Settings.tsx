@@ -40,6 +40,7 @@ export function Settings() {
   }, []);
 
   const handleCookiesToggle = (enabled: boolean) => {
+    trackEvent("cookies_toggled", { enabled });
     setUseCookies(enabled);
     const saved = saveDownloadSettings({ useCookies: enabled, cookiesBrowser });
     updateDownloadSettings(saved);
@@ -64,6 +65,7 @@ export function Settings() {
   };
 
   const handleLangChange = (code: string) => {
+    trackEvent("language_changed", { locale: code });
     i18n.changeLanguage(code);
     localStorage.setItem("stroygetter-lang", code);
   };
