@@ -115,6 +115,11 @@ pub async fn fetch_video_info(
 ) -> Result<VideoInfo, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
     let mut args = build_common_args(&settings);
+    if crate::pot::is_youtube_url(&url) {
+        if let Some(token) = crate::pot::get_po_token(&app, &url).await {
+            args.extend(crate::pot::build_pot_args(&token));
+        }
+    }
     args.extend([
         "--dump-json".to_string(),
         "--no-playlist".to_string(),

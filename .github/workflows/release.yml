@@ -21,18 +21,22 @@ jobs:
           - platform: macos-14          # Apple Silicon (arm64)
             rust-target: aarch64-apple-darwin
             ytdlp-asset: yt-dlp_macos
+            bgutil-asset: bgutil-pot-macos-aarch64
 
           - platform: macos-13          # Intel (x86_64)
             rust-target: x86_64-apple-darwin
             ytdlp-asset: yt-dlp_macos
+            bgutil-asset: bgutil-pot-macos-x86_64
 
           - platform: windows-latest
             rust-target: x86_64-pc-windows-msvc
             ytdlp-asset: yt-dlp.exe
+            bgutil-asset: bgutil-pot-windows-x86_64.exe
 
           - platform: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
             ytdlp-asset: yt-dlp_linux
+            bgutil-asset: bgutil-pot-linux-x86_64
 
     runs-on: ${{ matrix.platform }}
 
@@ -116,6 +120,22 @@ jobs:
           $exe = Get-ChildItem -Recurse -Filter ffmpeg.exe ffmpeg_tmp | Select-Object -First 1
           Copy-Item $exe.FullName "src-tauri\binaries\ffmpeg-${{ matrix.rust-target }}.exe"
           Remove-Item -Recurse -Force ffmpeg.zip, ffmpeg_tmp
+
+      - name: Download bgutil-pot (Unix)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os != 'Windows'
+        run: |
+          curl -fsSL \
+            "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/${{ matrix.bgutil-asset }}" \
+            -o "src-tauri/binaries/bgutil-pot-${{ matrix.rust-target }}"
+          chmod +x "src-tauri/binaries/bgutil-pot-${{ matrix.rust-target }}"
+
+      - name: Download bgutil-pot (Windows)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/${{ matrix.bgutil-asset }}" `
+            -OutFile "src-tauri\binaries\bgutil-pot-${{ matrix.rust-target }}.exe"
 
       # ── Frontend ─────────────────────────────────────────────────────────────
       - run: npm ci

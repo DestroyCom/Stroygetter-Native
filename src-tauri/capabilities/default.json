@@ -9,7 +9,8 @@
       "identifier": "shell:allow-execute",
       "allow": [
         { "name": "yt-dlp", "sidecar": true },
-        { "name": "ffmpeg", "sidecar": true }
+        { "name": "ffmpeg", "sidecar": true },
+        { "name": "bgutil-pot", "sidecar": true }
       ]
     },
     "opener:allow-open-path",

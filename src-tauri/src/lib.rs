@@ -1,5 +1,6 @@
 mod commands;
 mod db;
+mod pot;
 mod sidecar;
 
 use commands::settings::DownloadSettingsState;
