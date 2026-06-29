@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { Film, Globe, Plus, Settings, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -22,10 +21,9 @@ export function Sidebar() {
     return () => window.removeEventListener("history-cleared", onCleared);
   }, []);
 
-  const openBlog = () => invoke("open_blog").catch(() => {});
 
   return (
-    <aside className="flex h-screen w-[220px] shrink-0 flex-col border-r border-white/8 bg-stroy-900">
+    <aside className="flex h-screen w-55 shrink-0 flex-col border-r border-white/8 bg-stroy-900">
       {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-white/8 px-5 py-5">
         <img src={logoWhite} alt="StroyGetter" className="h-6" />
@@ -101,8 +99,13 @@ export function Sidebar() {
         </button>
         <button
           type="button"
-          onClick={openBlog}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/6 hover:text-white"
+          onClick={() => navigate("/updates")}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+            location.pathname === "/updates"
+              ? "bg-white/8 text-white"
+              : "text-white/60 hover:bg-white/6 hover:text-white"
+          )}
         >
           <Globe size={15} />
           {t("sidebar.updates", "Mises à jour")}

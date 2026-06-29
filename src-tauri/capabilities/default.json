@@ -13,6 +13,7 @@
         { "name": "bgutil-pot", "sidecar": true }
       ]
     },
+    "shell:allow-open",
     "opener:allow-open-path",
     "dialog:allow-open",
     "log:default"

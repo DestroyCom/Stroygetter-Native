@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { open as openUrl } from "@tauri-apps/plugin-shell";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { getVersion } from "@tauri-apps/api/app";
-import { Sidebar } from "@/components/custom/Sidebar";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { BottomNav } from "@/components/custom/BottomNav";
-import { Home } from "@/views/Home";
-import { Fetch } from "@/views/Fetch";
-import { Settings } from "@/views/Settings";
-import { MetadataEditor } from "@/views/MetadataEditor";
-import { checkForUpdate, RELEASES_PAGE } from "@/lib/updater";
+import { Sidebar } from "@/components/custom/Sidebar";
 import { trackPageView } from "@/lib/analytics";
+import { checkForUpdate, RELEASES_PAGE } from "@/lib/updater";
+import { Fetch } from "@/views/Fetch";
+import { Home } from "@/views/Home";
+import { MetadataEditor } from "@/views/MetadataEditor";
+import { Settings } from "@/views/Settings";
+import { Updates } from "@/views/Updates";
 
 function NavigationTracker() {
   const location = useLocation();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run on route change
   useEffect(() => {
     trackPageView();
   }, [location.pathname]);
@@ -90,6 +92,7 @@ export function App() {
               <Route path="/fetch" element={<Fetch />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/metadata-editor" element={<MetadataEditor />} />
+              <Route path="/updates" element={<Updates />} />
             </Routes>
           </main>
 
