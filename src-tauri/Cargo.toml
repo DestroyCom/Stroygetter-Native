@@ -23,3 +23,4 @@ uuid = { version = "1", features = ["v4"] }
 dirs = "5"
 id3 = "1"
 base64 = "0.22"
+sentry = { version = "0.34", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"] }

@@ -6,6 +6,20 @@ use commands::settings::DownloadSettingsState;
 use db::DbConn;
 use tauri::Manager;
 
+fn init_sentry() -> Option<sentry::ClientInitGuard> {
+    let dsn = option_env!("GLITCHTIP_DSN")?;
+    if dsn.is_empty() {
+        return None;
+    }
+    Some(sentry::init((
+        dsn,
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            ..Default::default()
+        },
+    )))
+}
+
 #[tauri::command]
 fn get_history(db: tauri::State<DbConn>) -> Result<Vec<db::DownloadRecord>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
@@ -14,6 +28,8 @@ fn get_history(db: tauri::State<DbConn>) -> Result<Vec<db::DownloadRecord>, Stri
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let _sentry = init_sentry();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
