@@ -135,6 +135,12 @@ export const setLogLevel = (level: string): Promise<void> =>
     throw e;
   });
 
+export const readLocalImageAsDataUrl = (path: string): Promise<string> =>
+  invoke<string>("read_local_image_as_data_url", { path }).catch((e) => {
+    captureIfEnabled(e, { command: "read_local_image_as_data_url" });
+    throw e;
+  });
+
 export const writeAudioMetadata = (args: WriteMetadataArgs): Promise<void> =>
   invoke<void>("write_audio_metadata", {
     path: args.path,

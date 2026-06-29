@@ -48,6 +48,14 @@ pub(crate) fn parse_lrc_line(line: &str) -> Option<(u32, String)> {
 }
 
 #[tauri::command]
+pub fn read_local_image_as_data_url(path: String) -> Result<String, String> {
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+    let mime = mime_from_extension(&path);
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:{};base64,{}", mime, b64))
+}
+
+#[tauri::command]
 pub async fn read_audio_metadata(path: String) -> Result<AudioMetadata, String> {
     let tag = match Tag::read_from_path(&path) {
         Ok(t) => t,

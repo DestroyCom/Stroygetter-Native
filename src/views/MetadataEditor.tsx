@@ -1,4 +1,3 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, Tag } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -7,7 +6,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Textarea } from "@/components/ui/textarea";
 import { trackEvent } from "@/lib/analytics";
-import { readAudioMetadata, writeAudioMetadata } from "@/lib/commands";
+import {
+	readAudioMetadata,
+	readLocalImageAsDataUrl,
+	writeAudioMetadata,
+} from "@/lib/commands";
 import { searchItunesCover } from "@/lib/metadata";
 import type { ItunesCoverResult, WriteMetadataArgs } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -42,6 +45,9 @@ export function MetadataEditor() {
 	const [selectedCoverPath, setSelectedCoverPath] = useState<string | null>(
 		null,
 	);
+	const [selectedCoverPreview, setSelectedCoverPreview] = useState<
+		string | null
+	>(null);
 	const [itunesResults, setItunesResults] = useState<ItunesCoverResult[]>([]);
 	const [itunesQuery, setItunesQuery] = useState("");
 	const [isSearching, setIsSearching] = useState(false);
@@ -125,6 +131,12 @@ export function MetadataEditor() {
 		if (selected && typeof selected === "string") {
 			setSelectedCoverPath(selected);
 			setSelectedCoverUrl(null);
+			try {
+				const dataUrl = await readLocalImageAsDataUrl(selected);
+				setSelectedCoverPreview(dataUrl);
+			} catch {
+				setSelectedCoverPreview(null);
+			}
 		}
 	}
 
@@ -169,9 +181,8 @@ export function MetadataEditor() {
 		}
 	}
 
-	const displayCover = selectedCoverPath
-		? convertFileSrc(selectedCoverPath)
-		: (selectedCoverUrl ?? currentCoverDataUrl);
+	const displayCover =
+		selectedCoverPreview ?? selectedCoverUrl ?? currentCoverDataUrl;
 
 	if (isLoading) {
 		return (
