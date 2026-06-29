@@ -116,8 +116,6 @@ pub async fn fetch_video_info(
     let settings = dl_settings.0.lock().unwrap().clone();
     let mut args = build_common_args(&settings);
     args.extend([
-        "--add-header".to_string(), "referer:youtube.com".to_string(),
-        "--add-header".to_string(), "user-agent:googlebot".to_string(),
         "--dump-json".to_string(),
         "--no-playlist".to_string(),
         url.clone(),

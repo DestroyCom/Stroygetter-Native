@@ -12,7 +12,7 @@
         { "name": "ffmpeg", "sidecar": true }
       ]
     },
-    "shell:allow-open",
+    "opener:allow-open-path",
     "dialog:allow-open",
     "log:default"
   ]

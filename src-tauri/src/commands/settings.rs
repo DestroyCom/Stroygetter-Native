@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
-use tauri_plugin_shell::ShellExt;
+use tauri_plugin_opener::OpenerExt;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DownloadSettings {
@@ -30,7 +30,7 @@ pub fn build_common_args(settings: &DownloadSettings) -> Vec<String> {
     } else {
         args.extend([
             "--extractor-args".to_string(),
-            "youtube:player_client=web,tv_embedded,android".to_string(),
+            "youtube:player_client=mweb,web".to_string(),
         ]);
     }
     args
@@ -141,8 +141,8 @@ pub fn get_log_dir(app: AppHandle) -> String {
 #[tauri::command]
 pub fn open_log_dir(app: AppHandle) -> Result<(), String> {
     let log_dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
-    app.shell()
-        .open(log_dir.to_string_lossy().as_ref(), None)
+    app.opener()
+        .open_path(log_dir.to_string_lossy().as_ref(), None::<&str>)
         .map_err(|e| e.to_string())
 }
 

@@ -128,7 +128,10 @@ pub async fn download_video(
     let out = downloads_dir().join(format!("{}.mp4", safe));
     let out_str = out.to_string_lossy().to_string();
 
-    let format_str = format!("{}+bestaudio[ext=m4a]/{}+bestaudio", itag, itag);
+    // {0}+bestaudio: DASH video-only itag merged with audio (ideal path)
+    // {0}: muxed itag as-is (fallback when itag already has audio)
+    // bestvideo+bestaudio/best: last-resort when the specific itag is unavailable
+    let format_str = format!("{0}+bestaudio[ext=m4a]/{0}+bestaudio/{0}/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best", itag);
     let mut args = vec![
         "-f".to_string(), format_str,
         "--merge-output-format".to_string(), "mp4".to_string(),
