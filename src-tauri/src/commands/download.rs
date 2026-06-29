@@ -52,7 +52,7 @@ fn sanitize(title: &str) -> String {
         .to_string()
 }
 
-fn validate_url(url: &str) -> Result<(), String> {
+pub fn validate_url(url: &str) -> Result<(), String> {
     if url.starts_with("https://") || url.starts_with("http://") {
         Ok(())
     } else {
@@ -222,7 +222,7 @@ pub async fn download_video(
                "-map", "0:v", "-map", "1:a", "-c", "copy", "-y", &out_str])
         .output()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| { cleanup(); e.to_string() })?;
     cleanup();
 
     if !merge.status.success() {

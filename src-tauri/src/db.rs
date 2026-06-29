@@ -73,8 +73,8 @@ pub fn get_history(conn: &Connection) -> Result<Vec<DownloadRecord>> {
     let mut stmt = conn.prepare(
         "SELECT id, url, title, author, thumbnail_url, format, file_path, created_at
          FROM downloads
-         WHERE id IN (
-             SELECT MAX(id) FROM downloads GROUP BY url
+         WHERE rowid IN (
+             SELECT MAX(rowid) FROM downloads GROUP BY url
          )
          ORDER BY created_at DESC
          LIMIT 50",

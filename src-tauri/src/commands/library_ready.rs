@@ -1,4 +1,4 @@
-use crate::commands::download::get_sidecar_exe;
+use crate::commands::download::{get_sidecar_exe, validate_url};
 use crate::commands::settings::{build_common_args, build_youtube_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
@@ -59,7 +59,8 @@ pub async fn download_library_ready(
     lyrics_lrc: String,
     thumbnail: Option<String>,
 ) -> Result<String, String> {
-    let settings = dl_settings.0.lock().unwrap().clone();
+    let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
+    validate_url(&url)?;
     let safe = sanitize(&title);
     let tmp_audio = std::env::temp_dir().join(format!("{}_audio.mp3", safe));
     let tmp_cover = std::env::temp_dir().join(format!("{}_cover.jpg", safe));
