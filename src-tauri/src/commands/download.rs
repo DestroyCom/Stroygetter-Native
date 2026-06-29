@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
 #[derive(Serialize, Clone)]
 pub struct ProgressPayload {
@@ -174,9 +175,11 @@ pub async fn download_video(
     let out = unique_path(&downloads_dir().join(format!("{}.mp4", safe)));
     let out_str = out.to_string_lossy().to_string();
 
-    let tmp = std::env::temp_dir();
-    let video_tmp = tmp.join(format!("{}_video.mp4", safe));
-    let audio_tmp = tmp.join(format!("{}_audio.m4a", safe));
+    let tmp_id = Uuid::new_v4().simple().to_string();
+    let tmp_subdir = std::env::temp_dir().join(format!("stroygetter_{}", tmp_id));
+    std::fs::create_dir_all(&tmp_subdir).map_err(|e| e.to_string())?;
+    let video_tmp = tmp_subdir.join(format!("{}_video.mp4", safe));
+    let audio_tmp = tmp_subdir.join(format!("{}_audio.m4a", safe));
     let video_tmp_str = video_tmp.to_string_lossy().to_string();
     let audio_tmp_str = audio_tmp.to_string_lossy().to_string();
 
@@ -207,8 +210,7 @@ pub async fn download_video(
     );
 
     let cleanup = || {
-        let _ = std::fs::remove_file(&video_tmp);
-        let _ = std::fs::remove_file(&audio_tmp);
+        let _ = std::fs::remove_dir_all(&tmp_subdir);
     };
     if let Err(e) = video_result { cleanup(); log::error!("download_video: video stream failed — {e}"); return Err(e); }
     if let Err(e) = audio_result { cleanup(); log::error!("download_video: audio stream failed — {e}"); return Err(e); }
@@ -438,5 +440,12 @@ mod tests {
         assert!(validate_format_id("bestvideo;--exec rm").is_err());
         assert!(validate_format_id("--help").is_err());
         assert!(validate_format_id("720p && rm -rf ~").is_err());
+    }
+
+    #[test]
+    fn temp_subdir_names_are_unique() {
+        let a = format!("{}", uuid::Uuid::new_v4().simple());
+        let b = format!("{}", uuid::Uuid::new_v4().simple());
+        assert_ne!(a, b);
     }
 }
