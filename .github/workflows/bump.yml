@@ -21,7 +21,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # PAT needed to push a tag that triggers release.yml
           # (GITHUB_TOKEN pushes are intentionally blocked from triggering other workflows)

@@ -37,10 +37,10 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # ── Node ────────────────────────────────────────────────────────────────
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -73,7 +73,7 @@ jobs:
 
       - name: Cache sidecar binaries
         id: cache-sidecars
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: src-tauri/binaries
           key: sidecars-${{ matrix.rust-target }}-${{ steps.cache-ym.outputs.ym }}
@@ -177,7 +177,7 @@ jobs:
       # Proves each binary was produced by this repo's CI from a specific commit.
       # Verify: gh attestation verify <file> --repo DestroyCom/Stroygetter-Native
       - name: GitHub provenance attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
@@ -211,7 +211,7 @@ jobs:
       - name: VirusTotal scan
         id: vt
         if: steps.secrets.outputs.has_vt == 'true'
-        uses: crazy-max/ghaction-virustotal@v4
+        uses: crazy-max/ghaction-virustotal@v5
         with:
           files: |
             src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*.dmg
@@ -244,7 +244,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Download all per-platform VT result files uploaded to the release
       - name: Collect VirusTotal results
