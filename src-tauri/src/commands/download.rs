@@ -51,6 +51,32 @@ fn sanitize(title: &str) -> String {
         .to_string()
 }
 
+fn validate_url(url: &str) -> Result<(), String> {
+    if url.starts_with("https://") || url.starts_with("http://") {
+        Ok(())
+    } else {
+        Err(format!("Invalid URL scheme — only http/https are allowed"))
+    }
+}
+
+fn validate_format_id(format_id: &str) -> Result<(), String> {
+    // Reject entries that start with a dash (command-line flag injection)
+    if format_id.starts_with('-') {
+        return Err(format!("Invalid format_id — cannot start with dash"));
+    }
+    // Reject entries containing semicolons or ampersands (command injection)
+    if format_id.contains(';') || format_id.contains('&') || format_id.contains('|') {
+        return Err(format!("Invalid format_id — contains disallowed characters"));
+    }
+    // Ensure only alphanumeric + safe special chars are used
+    let valid = format_id.chars().all(|c| c.is_alphanumeric() || matches!(c, '+' | '-' | '_' | '.' | '/' | '@' | '[' | ']' | ',' | ' '));
+    if valid {
+        Ok(())
+    } else {
+        Err(format!("Invalid format_id — contains disallowed characters"))
+    }
+}
+
 /// Returns the path to a Tauri sidecar binary (e.g. "ffmpeg") on disk.
 /// Tauri names sidecars with the target triple suffix (e.g. "ffmpeg-aarch64-apple-darwin").
 pub fn get_sidecar_exe(name: &str) -> Option<String> {
@@ -143,6 +169,7 @@ pub async fn download_video(
     thumbnail: Option<String>,
 ) -> Result<String, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
+    validate_url(&url)?;
     let safe = sanitize(&title);
     let out = unique_path(&downloads_dir().join(format!("{}.mp4", safe)));
     let out_str = out.to_string_lossy().to_string();
@@ -220,6 +247,7 @@ pub async fn download_audio(
     thumbnail: Option<String>,
 ) -> Result<String, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
+    validate_url(&url)?;
     let safe = sanitize(&title);
     let out = unique_path(&downloads_dir().join(format!("{}.mp3", safe)));
     let out_str = out.to_string_lossy().to_string();
@@ -269,6 +297,7 @@ pub async fn download_tiktok(
     thumbnail: Option<String>,
 ) -> Result<String, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
+    validate_url(&url)?;
     let safe = sanitize(&title);
     let ext = if audio_only { "mp3" } else { "mp4" };
     let out = downloads_dir().join(format!("{}.{}", safe, ext));
@@ -328,6 +357,8 @@ pub async fn download_twitch(
     thumbnail: Option<String>,
 ) -> Result<String, String> {
     let settings = dl_settings.0.lock().unwrap().clone();
+    validate_url(&url)?;
+    validate_format_id(&format_id)?;
     let safe = sanitize(&title);
     let is_audio = format_id == "audio";
     let ext = if is_audio { "mp3" } else { "mp4" };
@@ -377,5 +408,35 @@ mod tests {
         assert_eq!(parse_percent("[download]  42.5% of 10.00MiB"), Some(42.5));
         assert_eq!(parse_percent("[download] 100% of 10.00MiB"), Some(100.0));
         assert_eq!(parse_percent("[info] Writing video"), None);
+    }
+
+    #[test]
+    fn validate_url_accepts_http_and_https() {
+        assert!(validate_url("https://www.youtube.com/watch?v=abc").is_ok());
+        assert!(validate_url("http://example.com/video").is_ok());
+    }
+
+    #[test]
+    fn validate_url_rejects_non_http_schemes() {
+        assert!(validate_url("file:///etc/passwd").is_err());
+        assert!(validate_url("ftp://example.com/file").is_err());
+        assert!(validate_url("javascript:alert(1)").is_err());
+        assert!(validate_url("/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn validate_format_id_accepts_valid_twitch_formats() {
+        assert!(validate_format_id("audio").is_ok());
+        assert!(validate_format_id("best").is_ok());
+        assert!(validate_format_id("720p60").is_ok());
+        assert!(validate_format_id("160p30").is_ok());
+        assert!(validate_format_id("1080p60__Source").is_ok());
+    }
+
+    #[test]
+    fn validate_format_id_rejects_injection_attempts() {
+        assert!(validate_format_id("bestvideo;--exec rm").is_err());
+        assert!(validate_format_id("--help").is_err());
+        assert!(validate_format_id("720p && rm -rf ~").is_err());
     }
 }
