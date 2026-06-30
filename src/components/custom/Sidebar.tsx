@@ -18,7 +18,11 @@ export function Sidebar({ updateVersion }: { updateVersion?: string | null }) {
     getHistory().then(setHistory).catch(() => {});
     const onCleared = () => getHistory().then(setHistory).catch(() => {});
     window.addEventListener("history-cleared", onCleared);
-    return () => window.removeEventListener("history-cleared", onCleared);
+    window.addEventListener("download-complete", onCleared);
+    return () => {
+      window.removeEventListener("history-cleared", onCleared);
+      window.removeEventListener("download-complete", onCleared);
+    };
   }, []);
 
 
