@@ -321,4 +321,4 @@ jobs:
             printf '\n' >> release-body.md
             cat vt-section.md >> release-body.md
           fi
-          gh release edit "${TAG}" --notes-file release-body.md
+          gh release edit "${TAG}" --notes-file release-body.md --draft=false
