@@ -101,7 +101,7 @@ export function App() {
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar desktop uniquement */}
           <div className="hidden md:flex">
-            <Sidebar />
+            <Sidebar updateVersion={updateVersion} />
           </div>
 
           {/* Main content */}

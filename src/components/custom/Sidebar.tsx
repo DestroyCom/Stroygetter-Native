@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { Film, Globe, Plus, Settings, Tag } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -8,7 +8,7 @@ import { getHistory } from "@/lib/commands";
 import type { DownloadRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+export function Sidebar({ updateVersion }: { updateVersion?: string | null }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -97,6 +97,14 @@ export function Sidebar() {
           <Tag size={15} />
           {t("sidebar.metadata", "Metadata")}
         </button>
+        {updateVersion && (
+          <div className="mx-1 rounded-lg bg-stroy-500/15 border border-stroy-500/30 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-stroy-400 leading-none mb-0.5">
+              {t("sidebar.updateAvailable", "Mise à jour")}
+            </p>
+            <p className="text-xs font-semibold text-white">v{updateVersion}</p>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => navigate("/updates")}
