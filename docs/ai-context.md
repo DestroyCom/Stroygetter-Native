@@ -11,7 +11,9 @@
 downloader web (YouTube + TikTok) disponible sur [stroygetter.stroyco.eu](https://stroygetter.stroyco.eu).
 
 L'objectif : permettre aux utilisateurs de télécharger des vidéos **sans dépendre du serveur**,
-via un installeur natif Windows / macOS / Android.
+via un installeur natif Windows / macOS / Linux.
+
+> **Android** — abandonné. Alternatives recommandées : [YTDLnis](https://github.com/deniscerri/ytdlnis) et [Seal](https://github.com/junkfood02/Seal).
 
 ---
 
@@ -36,13 +38,13 @@ via un installeur natif Windows / macOS / Android.
 - TikTok : vidéo (avec et sans watermark) + audio
 - **Twitch : clips uniquement** (VODs désactivés) — inclus contrairement à la spec initiale
 - Cache local SQLite (éviter de re-télécharger)
-- Plateformes : Windows, macOS, Android
+- Plateformes : Windows, macOS (Apple Silicon), Linux
 
 **Exclus du MVP 1 :**
 
-- TikTok photos (gallery-dl n'a pas de binaire Android)
+- TikTok photos
 - Twitch VODs
-- Auto-update
+- Auto-update (notifications de mise à jour en place, pas de mise à jour automatique)
 
 ---
 
@@ -75,7 +77,7 @@ src-tauri/
       library_ready.rs  download_library_ready (pipeline yt-dlp → ffmpeg)
     lib.rs         builder Tauri, tous les commands enregistrés
     main.rs        point d'entrée
-  binaries/        yt-dlp-aarch64-apple-darwin, ffmpeg-aarch64-apple-darwin (+ autres targets)
+  binaries/        yt-dlp-{target}, ffmpeg-{target}, bgutil-pot-{target} (sidecars par target triple)
   tauri.conf.json  identifier: eu.stroyco.stroygetter-native
   Cargo.toml       tauri 2, tauri-plugin-shell 2, rusqlite bundled 0.31, etc.
 ```
@@ -219,11 +221,14 @@ export interface DownloadProgress {
 
 ---
 
-## Gestion des binaires (yt-dlp, ffmpeg)
+## Gestion des binaires (yt-dlp, ffmpeg, bgutil-pot)
 
 - Stockés dans `src-tauri/binaries/` avec suffixe target-triple (ex: `yt-dlp-aarch64-apple-darwin`)
+- Trois sidecars : `yt-dlp`, `ffmpeg`, `bgutil-pot` (provider de tokens pour les vidéos YouTube protégées)
 - Déclarés dans `tauri.conf.json` → `bundle.externalBin`
 - Accessibles via `tauri-plugin-shell` → `Command::sidecar()`
+- Téléchargés automatiquement au build CI (workflow `release.yml`), cachés mensuellement
+- `tauri.conf.json` `bundle.targets` : `["nsis", "dmg", "appimage", "deb"]` — MSI exclu (incompatible avec les versions pré-release alpha/beta)
 
 ---
 
