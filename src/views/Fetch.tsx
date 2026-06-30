@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import { GetterInput } from "@/components/custom/GetterInput";
 import { VideoLoading } from "@/components/custom/VideoLoading";
@@ -170,6 +171,7 @@ export function Fetch() {
 				duration_ms: Date.now() - downloadStartTime,
 			});
 			window.dispatchEvent(new Event("download-complete"));
+			toast.success(t("toast.downloadComplete", "Téléchargement terminé"));
 		} catch (e: unknown) {
 			const errorMsg =
 				e instanceof Error ? e.message : t("videoSelect.errorDownload");

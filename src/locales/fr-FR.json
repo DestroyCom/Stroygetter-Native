@@ -640,9 +640,9 @@
     "history": "Historique",
     "noDownloads": "Aucun téléchargement",
     "settings": "Paramètres",
-    "metadata": "Éditeur de Métadonnées",
+    "metadata": "Métadonnées",
     "editMetadata": "Modifier les métadonnées",
-    "updates": "Mises à jour"
+    "updates": "Nouveautés"
   },
   "settings": {
     "title": "Paramètres",
@@ -698,5 +698,10 @@
     "save": "Enregistrer",
     "saveSuccess": "Enregistré avec succès",
     "saveError": "Échec de l'enregistrement"
+  },
+  "toast": {
+    "downloadComplete": "Téléchargement terminé",
+    "metadataSaved": "Métadonnées sauvegardées",
+    "updateAvailable": "Mise à jour disponible"
   }
 }

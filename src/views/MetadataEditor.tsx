@@ -3,6 +3,7 @@ import { FolderOpen, Tag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Textarea } from "@/components/ui/textarea";
 import { trackEvent } from "@/lib/analytics";
@@ -172,6 +173,7 @@ export function MetadataEditor() {
 						: "none",
 			});
 			setSaveSuccess(true);
+			toast.success(t("toast.metadataSaved", "Métadonnées sauvegardées"));
 		} catch (e) {
 			setSaveError(
 				e instanceof Error ? e.message : t("metadataEditor.saveError"),

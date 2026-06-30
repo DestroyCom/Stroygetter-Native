@@ -640,9 +640,9 @@
     "history": "Historial",
     "noDownloads": "Sin descargas",
     "settings": "Configuración",
-    "metadata": "Metadatos Editor",
+    "metadata": "Metadatos",
     "editMetadata": "Editar metadatos",
-    "updates": "Actualizaciones"
+    "updates": "Novedades"
   },
   "settings": {
     "title": "Configuración",
@@ -698,5 +698,10 @@
     "save": "Guardar",
     "saveSuccess": "Guardado correctamente",
     "saveError": "Error al guardar"
+  },
+  "toast": {
+    "downloadComplete": "Descarga completada",
+    "metadataSaved": "Metadatos guardados",
+    "updateAvailable": "Actualización disponible"
   }
 }

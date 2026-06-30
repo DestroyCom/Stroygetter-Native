@@ -640,9 +640,9 @@
     "history": "History",
     "noDownloads": "No downloads",
     "settings": "Settings",
-    "metadata": "Metadata Editor",
+    "metadata": "Metadata",
     "editMetadata": "Edit metadata",
-    "updates": "Updates"
+    "updates": "What's new"
   },
   "settings": {
     "title": "Settings",
@@ -698,5 +698,10 @@
     "save": "Save",
     "saveSuccess": "Saved successfully",
     "saveError": "Save failed"
+  },
+  "toast": {
+    "downloadComplete": "Download complete",
+    "metadataSaved": "Metadata saved",
+    "updateAvailable": "Update available"
   }
 }

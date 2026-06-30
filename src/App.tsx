@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { getVersion } from "@tauri-apps/api/app";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+import { useEffect, useState } from "react";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { Toaster, toast } from "sonner";
 import { BottomNav } from "@/components/custom/BottomNav";
 import { Sidebar } from "@/components/custom/Sidebar";
 import { trackPageView } from "@/lib/analytics";
@@ -60,6 +61,9 @@ export function App() {
         if (info?.isNewer) {
           setUpdateVersion(info.latestVersion);
           setUpdateUrl(info.releaseUrl);
+          toast.info(`Mise à jour disponible — v${info.latestVersion}`, {
+            duration: 6000,
+          });
         }
       } catch {
         // non-fatal — update check failure silently ignored
@@ -70,6 +74,21 @@ export function App() {
   return (
     <BrowserRouter>
       <NavigationTracker />
+      <Toaster
+        position="bottom-right"
+        theme="dark"
+        toastOptions={{
+          classNames: {
+            toast: "bg-stroy-800 border border-white/8 text-white shadow-xl",
+            title: "text-white font-medium",
+            description: "text-white/60",
+            icon: "text-stroy-400",
+            success: "border-stroy-500/30",
+            error: "border-red-500/30",
+            info: "border-stroy-500/30",
+          },
+        }}
+      />
       <div className="flex h-screen flex-col overflow-hidden bg-stroy-950 text-white">
         {updateVersion && (
           <UpdateBanner

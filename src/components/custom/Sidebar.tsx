@@ -108,7 +108,7 @@ export function Sidebar() {
           )}
         >
           <Globe size={15} />
-          {t("sidebar.updates", "Mises à jour")}
+          {t("sidebar.updates", "What's new")}
         </button>
         <button
           type="button"
