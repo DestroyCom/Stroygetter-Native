@@ -23,10 +23,11 @@ jobs:
             ytdlp-asset: yt-dlp_macos
             bgutil-asset: bgutil-pot-macos-aarch64
 
-          - platform: macos-13          # Intel (x86_64)
-            rust-target: x86_64-apple-darwin
-            ytdlp-asset: yt-dlp_macos
-            bgutil-asset: bgutil-pot-macos-x86_64
+          # Intel (x86_64) disabled — Rosetta deprecated, arm64 covers all modern Macs
+          # - platform: macos-13
+          #   rust-target: x86_64-apple-darwin
+          #   ytdlp-asset: yt-dlp_macos
+          #   bgutil-asset: bgutil-pot-macos-x86_64
 
           - platform: windows-latest
             rust-target: x86_64-pc-windows-msvc
@@ -260,7 +261,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo '${{ steps.vt.outputs.analysis }}' \
-            | jq -r '.[] | "- [`\(.file | split("/") | last)`](\(.url))"' \
+            | while IFS='=' read -r file url; do
+                echo "- [\`$(basename "$file")\`]($url)"
+              done \
             > "vt-${{ matrix.rust-target }}.md"
           gh release upload "${{ github.ref_name }}" \
             "vt-${{ matrix.rust-target }}.md" --clobber
