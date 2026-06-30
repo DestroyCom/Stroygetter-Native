@@ -22,11 +22,8 @@ const BROWSER_LABELS: Record<string, string> = {
 
 export function Settings() {
   const { t } = useTranslation();
-  const [downloadDir, setDownloadDir] = useState<string>(
-    localStorage.getItem("stroygetter-download-dir") ?? ""
-  );
-
   const initial = loadDownloadSettings();
+  const [downloadDir, setDownloadDir] = useState<string>(initial.downloadDir);
   const [useCookies, setUseCookies] = useState(initial.useCookies);
   const [cookiesBrowser, setCookiesBrowser] = useState(initial.cookiesBrowser);
   const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
@@ -103,7 +100,8 @@ export function Settings() {
     const selected = await openDialog({ directory: true, multiple: false });
     if (typeof selected === "string") {
       setDownloadDir(selected);
-      localStorage.setItem("stroygetter-download-dir", selected);
+      const saved = saveDownloadSettings({ downloadDir: selected });
+      updateDownloadSettings(saved);
     }
   };
 

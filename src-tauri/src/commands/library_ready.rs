@@ -1,4 +1,4 @@
-use crate::commands::download::{get_sidecar_exe, validate_url};
+use crate::commands::download::{effective_dir, get_sidecar_exe, validate_url};
 use crate::commands::settings::{build_common_args, build_youtube_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
@@ -65,9 +65,7 @@ pub async fn download_library_ready(
     let tmp_id = uuid::Uuid::new_v4().simple().to_string();
     let tmp_audio = std::env::temp_dir().join(format!("stroygetter_{}_{}_audio.mp3", tmp_id, safe));
     let tmp_cover = std::env::temp_dir().join(format!("stroygetter_{}_{}_cover.jpg", tmp_id, safe));
-    let out = dirs::download_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join(format!("{}.mp3", safe));
+    let out = effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe));
 
     // Phase 1: download audio via yt-dlp
     emit_progress(&app, "downloading", 0.0);

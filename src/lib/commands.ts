@@ -100,6 +100,7 @@ export const updateDownloadSettings = (settings: DownloadSettings): Promise<void
   invoke<void>("update_download_settings", {
     useCookies: settings.useCookies,
     cookiesBrowser: settings.cookiesBrowser,
+    downloadDir: settings.downloadDir || null,
   }).catch((e) => {
     captureIfEnabled(e, { command: "update_download_settings" });
     throw e;

@@ -20,7 +20,13 @@ fn now_ts() -> i64 {
         .as_secs() as i64
 }
 
-fn downloads_dir() -> std::path::PathBuf {
+pub fn effective_dir(custom: Option<&str>) -> std::path::PathBuf {
+    if let Some(dir) = custom.filter(|s| !s.is_empty()) {
+        let p = std::path::PathBuf::from(dir);
+        if p.is_dir() {
+            return p;
+        }
+    }
     dirs::download_dir().unwrap_or_else(|| std::path::PathBuf::from("."))
 }
 
@@ -172,7 +178,7 @@ pub async fn download_video(
     let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
-    let out = unique_path(&downloads_dir().join(format!("{}.mp4", safe)));
+    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp4", safe)));
     let out_str = out.to_string_lossy().to_string();
 
     let tmp_id = Uuid::new_v4().simple().to_string();
@@ -252,7 +258,7 @@ pub async fn download_audio(
     let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
-    let out = unique_path(&downloads_dir().join(format!("{}.mp3", safe)));
+    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe)));
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = build_youtube_args();
@@ -303,7 +309,7 @@ pub async fn download_tiktok(
     validate_url(&url)?;
     let safe = sanitize(&title);
     let ext = if audio_only { "mp3" } else { "mp4" };
-    let out = unique_path(&downloads_dir().join(format!("{}.{}", safe, ext)));
+    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.{}", safe, ext)));
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = vec![
@@ -365,7 +371,7 @@ pub async fn download_twitch(
     let safe = sanitize(&title);
     let is_audio = format_id == "audio";
     let ext = if is_audio { "mp3" } else { "mp4" };
-    let out = unique_path(&downloads_dir().join(format!("{}.{}", safe, ext)));
+    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.{}", safe, ext)));
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = vec![];

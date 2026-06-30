@@ -6,7 +6,7 @@ import { App } from "./App";
 import "./globals.css";
 import "./lib/i18n";
 import { trackAppStarted } from "./lib/analytics";
-import { setLogLevel } from "./lib/commands";
+import { setLogLevel, updateDownloadSettings } from "./lib/commands";
 import { initLogger } from "./lib/logger";
 import { loadDownloadSettings } from "./lib/settings";
 
@@ -22,6 +22,7 @@ if (settings.errorReportingEnabled && import.meta.env.VITE_GLITCHTIP_DSN) {
 
 initLogger();
 setLogLevel(settings.logLevel);
+updateDownloadSettings(settings);
 trackAppStarted();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

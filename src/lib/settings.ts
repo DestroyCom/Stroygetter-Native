@@ -6,6 +6,7 @@ export interface DownloadSettings {
   analyticsEnabled: boolean;
   errorReportingEnabled: boolean;
   logLevel: LogLevel;
+  downloadDir: string;
 }
 
 const KEY = "stroygetter-dl-settings";
@@ -16,6 +17,7 @@ const DEFAULTS: DownloadSettings = {
   analyticsEnabled: true,
   errorReportingEnabled: true,
   logLevel: "info",
+  downloadDir: "",
 };
 
 export function loadDownloadSettings(): DownloadSettings {

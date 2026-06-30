@@ -261,7 +261,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo '${{ steps.vt.outputs.analysis }}' \
-            | while IFS='=' read -r file url; do
+            | tr ',' '\n' \
+            | while read -r pair; do
+                [ -z "$pair" ] && continue
+                file="${pair%%=*}"
+                url="${pair#*=}"
                 echo "- [\`$(basename "$file")\`]($url)"
               done \
             > "vt-${{ matrix.rust-target }}.md"

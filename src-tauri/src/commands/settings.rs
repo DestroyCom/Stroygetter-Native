@@ -6,11 +6,13 @@ use tauri_plugin_opener::OpenerExt;
 pub struct DownloadSettings {
     pub use_cookies: bool,
     pub cookies_browser: String,
+    #[serde(default)]
+    pub download_dir: Option<String>,
 }
 
 impl Default for DownloadSettings {
     fn default() -> Self {
-        Self { use_cookies: false, cookies_browser: String::new() }
+        Self { use_cookies: false, cookies_browser: String::new(), download_dir: None }
     }
 }
 
@@ -170,10 +172,12 @@ pub fn update_download_settings(
     state: State<'_, DownloadSettingsState>,
     use_cookies: bool,
     cookies_browser: String,
+    download_dir: Option<String>,
 ) {
     let mut s = state.0.lock().unwrap();
     s.use_cookies = use_cookies;
     s.cookies_browser = cookies_browser;
+    s.download_dir = download_dir.filter(|d| !d.is_empty());
 }
 
 #[tauri::command]

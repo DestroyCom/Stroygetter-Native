@@ -235,7 +235,7 @@ export interface DownloadProgress {
 ## Répertoire de téléchargement
 
 - Par défaut : dossier `Downloads` de l'utilisateur via `app_data_dir()` Tauri
-- Le répertoire personnalisé dans Settings.tsx est **UI-only pour l'instant** — non transmis au backend Rust
+- Le répertoire personnalisé est persisté dans `saveDownloadSettings` (localStorage) et transmis au backend Rust via `update_download_settings` à chaque changement et au démarrage (`main.tsx`). Le helper `effective_dir()` dans `download.rs` l'utilise pour tous les téléchargements (fallback sur `dirs::download_dir()` si invalide).
 
 ---
 
@@ -245,7 +245,6 @@ export interface DownloadProgress {
 |---------|---------|--------|
 | `fetchYouTubeMusicMetadata` | `src/lib/metadata.ts` | Stub — à porter depuis le web (`youtubei.js` → yt-dlp) |
 | `searchItunesCover` | `src/lib/metadata.ts` | Exportée publiquement — retourne jusqu'à 5 résultats |
-| `downloadDir` personnalisé | `src/views/Settings.tsx` | UI uniquement, non passé aux commands Rust |
 | Refresh sidebar après download | `src/components/custom/Sidebar.tsx` | Event-based partiel — pas systématique sur tous les paths |
 | Version hardcodée | `src/views/Settings.tsx` | Lire depuis `tauri.conf.json` dynamiquement |
 | Twitch VODs | `src-tauri/src/commands/download.rs` | Désactivé intentionnellement en MVP 1 |
