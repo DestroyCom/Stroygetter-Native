@@ -22,15 +22,19 @@
 
 ## Download
 
-| Platform | Architecture   | Status         |
-| -------- | -------------- | -------------- |
-| macOS    | Apple Silicon  | ✅ Available   |
-| macOS    | Intel (x86_64) | ✅ Available   |
-| Windows  | x64            | ✅ Available   |
-| Linux    | x64            | ✅ Available   |
-| Android  | —              | 🔜 Coming soon |
+| Platform | Architecture | Status |
+| -------- | ------------ | ------ |
+| macOS | Apple Silicon | ✅ Available |
+| macOS | Intel (x86_64) | ⚠️ Deprecated (Rosetta) |
+| Windows | x64 | ✅ Available |
+| Linux | x64 | ✅ Available |
 
 → **[Download latest release](https://github.com/DestroyCom/Stroygetter-Native/releases/latest)**
+
+**Android** — StroyGetter Native is desktop-only. For Android, these open-source alternatives are recommended:
+
+- [YTDLnis](https://github.com/deniscerri/ytdlnis) — feature-rich, supports many platforms
+- [Seal](https://github.com/junkfood02/Seal) — clean UI, yt-dlp powered
 
 > **macOS**: if macOS blocks the app ("unidentified developer"), right-click → Open, or run in terminal:
 
