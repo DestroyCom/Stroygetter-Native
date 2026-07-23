@@ -6,6 +6,11 @@ src-tauri/gen/
 *.env
 .DS_Store
 
+# Sidecars — téléchargés au build CI (release.yml), pas versionnés
+src-tauri/binaries/yt-dlp-*
+src-tauri/binaries/ffmpeg-*
+src-tauri/binaries/bgutil-pot-*
+
 # Fichiers source web (référence — pas part du projet natif)
 /globals.css
 /assets/
