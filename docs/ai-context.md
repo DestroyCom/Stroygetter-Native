@@ -229,6 +229,7 @@ export interface DownloadProgress {
 - Accessibles via `tauri-plugin-shell` → `Command::sidecar()`
 - Téléchargés automatiquement au build CI (workflow `release.yml`), cachés mensuellement
 - `tauri.conf.json` `bundle.targets` : `["nsis", "dmg", "appimage", "deb"]` — MSI exclu (incompatible avec les versions pré-release alpha/beta)
+- macOS : `src-tauri/entitlements.plist` (référencé via `bundle.macOS.entitlements`) donne `com.apple.security.cs.disable-library-validation` + `com.apple.security.cs.allow-unsigned-executable-memory` à l'app **et** à chaque sidecar re-signé par le bundler. Nécessaire car yt-dlp (PyInstaller onefile) auto-extrait et fait un `dlopen()` sur son Python embarqué depuis `_MEIxxxxx` au runtime — ce fichier porte sa propre signature ad-hoc, distincte de celle appliquée par Tauri au binaire, ce qui déclenche un échec de Library Validation du noyau (`different Team IDs`) si Hardened Runtime est actif sans cette entitlement.
 
 ---
 

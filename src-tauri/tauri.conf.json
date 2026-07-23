@@ -40,7 +40,8 @@
       "binaries/bgutil-pot"
     ],
     "macOS": {
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "entitlements": "entitlements.plist"
     }
   }
 }
