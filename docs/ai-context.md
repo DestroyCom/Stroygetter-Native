@@ -228,6 +228,7 @@ export interface DownloadProgress {
 - Déclarés dans `tauri.conf.json` → `bundle.externalBin`
 - Accessibles via `tauri-plugin-shell` → `Command::sidecar()`
 - Téléchargés automatiquement au build CI (workflow `release.yml`), cachés mensuellement
+- ffmpeg Windows : téléchargé depuis le tag `latest` de `BtbN/FFmpeg-Builds` (nom d'asset stable, ne casse pas quand BtbN purge ses vieilles releases "autobuild-*") + vérifié contre `checksums.sha256` publié dans la même release. Ne pas repasser à un pin URL+SHA256 statique sur un tag "autobuild-*" précis — cassera en CI dès que ce build sera purgé (vécu le 2026-07-23)
 - `tauri.conf.json` `bundle.targets` : `["nsis", "dmg", "appimage", "deb"]` — MSI exclu (incompatible avec les versions pré-release alpha/beta)
 - macOS : `src-tauri/entitlements.plist` (référencé via `bundle.macOS.entitlements`) donne `com.apple.security.cs.disable-library-validation` + `com.apple.security.cs.allow-unsigned-executable-memory` à l'app **et** à chaque sidecar re-signé par le bundler. Nécessaire car yt-dlp (PyInstaller onefile) auto-extrait et fait un `dlopen()` sur son Python embarqué depuis `_MEIxxxxx` au runtime — ce fichier porte sa propre signature ad-hoc, distincte de celle appliquée par Tauri au binaire, ce qui déclenche un échec de Library Validation du noyau (`different Team IDs`) si Hardened Runtime est actif sans cette entitlement.
 
