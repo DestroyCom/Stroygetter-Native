@@ -1,4 +1,4 @@
-use crate::commands::download::{effective_dir, get_sidecar_exe, validate_url};
+use crate::commands::download::{effective_dir, get_sidecar_exe, unique_path, validate_url};
 use crate::commands::settings::{build_common_args, build_youtube_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
@@ -65,7 +65,11 @@ pub async fn download_library_ready(
     let tmp_id = uuid::Uuid::new_v4().simple().to_string();
     let tmp_audio = std::env::temp_dir().join(format!("stroygetter_{}_{}_audio.mp3", tmp_id, safe));
     let tmp_cover = std::env::temp_dir().join(format!("stroygetter_{}_{}_cover.jpg", tmp_id, safe));
-    let out = effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe));
+    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe)));
+    let cleanup = || {
+        let _ = std::fs::remove_file(&tmp_audio);
+        let _ = std::fs::remove_file(&tmp_cover);
+    };
 
     // Phase 1: download audio via yt-dlp
     emit_progress(&app, "downloading", 0.0);
@@ -103,7 +107,10 @@ pub async fn download_library_ready(
     ytdlp_args.extend(["-o".to_string(), tmp_audio_str.clone(), url.clone()]);
 
     let ytdlp_args_ref: Vec<&str> = ytdlp_args.iter().map(|s| s.as_str()).collect();
-    sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args_ref, Some(tx)).await?;
+    if let Err(error) = sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args_ref, Some(tx)).await {
+        cleanup();
+        return Err(error);
+    }
 
     // Phase 2: download cover image — try primary URL, fall back, proceed without on failure
     emit_progress(&app, "fetching_cover", 0.0);
@@ -123,7 +130,10 @@ pub async fn download_library_ready(
     };
 
     let has_cover = if let Some(ref bytes) = cover_bytes {
-        std::fs::write(&tmp_cover, bytes).map_err(|e| e.to_string())?;
+        if let Err(error) = std::fs::write(&tmp_cover, bytes) {
+            cleanup();
+            return Err(error.to_string());
+        }
         true
     } else {
         false
@@ -174,12 +184,14 @@ pub async fn download_library_ready(
     ffmpeg_args.push(out.to_string_lossy().to_string());
 
     let args_ref: Vec<&str> = ffmpeg_args.iter().map(|s| s.as_str()).collect();
-    sidecar::run_sidecar(&app, "ffmpeg", &args_ref, None).await?;
+    if let Err(error) = sidecar::run_sidecar(&app, "ffmpeg", &args_ref, None).await {
+        cleanup();
+        return Err(error);
+    }
 
     emit_progress(&app, "embedding", 100.0);
 
-    let _ = std::fs::remove_file(&tmp_audio);
-    let _ = std::fs::remove_file(&tmp_cover);
+    cleanup();
 
     let out_str = out.to_string_lossy().to_string();
 

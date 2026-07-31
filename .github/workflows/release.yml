@@ -60,6 +60,11 @@ jobs:
           workspaces: src-tauri
           key: ${{ matrix.rust-target }}
 
+      # Install before fetching sidecars. ffmpeg-static's install hook places
+      # the pinned, platform-specific static FFmpeg binary in node_modules.
+      - name: Install Node dependencies
+        run: npm ci
+
       # ── System dependencies (Linux only) ────────────────────────────────────
       - name: Linux system dependencies
         if: runner.os == 'Linux'
@@ -67,8 +72,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y \
             libgtk-3-dev libwebkit2gtk-4.1-dev \
-            libappindicator3-dev librsvg2-dev patchelf \
-            ffmpeg
+            libappindicator3-dev librsvg2-dev patchelf
 
       # ── Sidecar binaries (cached monthly) ───────────────────────────────────
       - name: Cache month (sidecar rotation)
@@ -101,15 +105,19 @@ jobs:
             -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" `
             -OutFile "src-tauri\binaries\yt-dlp-${{ matrix.rust-target }}.exe"
 
-      - name: Install ffmpeg (macOS)
-        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'macOS'
+      - name: Copy static ffmpeg sidecar (Unix)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os != 'Windows'
         run: |
-          brew install --quiet ffmpeg
-          cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+          ffmpeg_path="$(node -e "process.stdout.write(require('ffmpeg-static'))")"
+          test -x "$ffmpeg_path"
+          cp "$ffmpeg_path" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+          chmod +x "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
 
-      - name: Copy ffmpeg (Linux)
-        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Linux'
-        run: cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+      - name: Verify macOS ffmpeg sidecar
+        if: runner.os == 'macOS'
+        run: |
+          bash scripts/verify-macos-ffmpeg.sh \
+            "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
 
       - name: Download ffmpeg (Windows)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
@@ -153,9 +161,6 @@ jobs:
             -Uri "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/${{ matrix.bgutil-asset }}" `
             -OutFile "src-tauri\binaries\bgutil-pot-${{ matrix.rust-target }}.exe"
 
-      # ── Frontend ─────────────────────────────────────────────────────────────
-      - run: npm ci
-
       # ── Tauri build + create GitHub Release ──────────────────────────────────
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -193,6 +198,24 @@ jobs:
           \) | sort > artifacts.txt
           echo "Found artifacts:"
           cat artifacts.txt
+
+      # Verify the binary after Tauri has copied it into the installed app.
+      # This catches bundle-time regressions, not just a bad source sidecar.
+      - name: Smoke-test packaged macOS app
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          dmg="$(find "src-tauri/target/${{ matrix.rust-target }}/release/bundle" \
+            -type f -name '*.dmg' -print -quit)"
+          mount_dir="$(mktemp -d)"
+          cleanup() {
+            hdiutil detach "$mount_dir" -quiet 2>/dev/null || true
+            rmdir "$mount_dir" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir"
+          bash scripts/verify-macos-ffmpeg.sh \
+            "$mount_dir/StroyGetter.app/Contents/MacOS/ffmpeg"
 
       # SHA-256 checksum file — always generated, uploaded to the release
       - name: SHA-256 checksums

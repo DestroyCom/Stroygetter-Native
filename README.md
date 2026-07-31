@@ -100,9 +100,17 @@ curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos \
   -o src-tauri/binaries/yt-dlp-aarch64-apple-darwin
 chmod +x src-tauri/binaries/yt-dlp-aarch64-apple-darwin
 
-brew install ffmpeg
-cp $(which ffmpeg) src-tauri/binaries/ffmpeg-aarch64-apple-darwin
+npm ci
+cp "$(node -e "process.stdout.write(require('ffmpeg-static'))")" \
+  src-tauri/binaries/ffmpeg-aarch64-apple-darwin
+chmod +x src-tauri/binaries/ffmpeg-aarch64-apple-darwin
+bash scripts/verify-macos-ffmpeg.sh \
+  src-tauri/binaries/ffmpeg-aarch64-apple-darwin
 ```
+
+The FFmpeg sidecar must be self-contained. Do not copy the executable from
+Homebrew: it points to the build machine's package directory and will not run
+on a clean Mac.
 
 ### Run in dev
 

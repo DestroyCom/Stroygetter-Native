@@ -30,7 +30,7 @@ pub fn effective_dir(custom: Option<&str>) -> std::path::PathBuf {
     dirs::download_dir().unwrap_or_else(|| std::path::PathBuf::from("."))
 }
 
-fn unique_path(base: &std::path::Path) -> std::path::PathBuf {
+pub(crate) fn unique_path(base: &std::path::Path) -> std::path::PathBuf {
     if !base.exists() {
         return base.to_path_buf();
     }
