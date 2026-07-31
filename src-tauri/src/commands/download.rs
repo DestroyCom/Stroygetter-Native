@@ -2,6 +2,8 @@ use crate::commands::settings::{build_common_args, build_youtube_args, DownloadS
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
 use serde::Serialize;
+use std::fs::OpenOptions;
+use std::io::ErrorKind;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::mpsc;
@@ -46,6 +48,36 @@ pub(crate) fn unique_path(base: &std::path::Path) -> std::path::PathBuf {
             return candidate;
         }
         i += 1;
+    }
+}
+
+/// Atomically reserves a unique output path by creating it before the download starts.
+/// The caller owns the reservation and must remove it if the operation fails.
+pub(crate) fn reserve_unique_path(base: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    let stem = base.file_stem().unwrap_or_default().to_string_lossy().to_string();
+    let ext = base.extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
+    let dir = base.parent().unwrap_or(std::path::Path::new("."));
+
+    let mut suffix = 0u32;
+    loop {
+        let candidate = if suffix == 0 {
+            base.to_path_buf()
+        } else {
+            dir.join(format!("{} ({}){}", stem, suffix, ext))
+        };
+
+        match OpenOptions::new().write(true).create_new(true).open(&candidate) {
+            Ok(file) => {
+                drop(file);
+                return Ok(candidate);
+            }
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => {
+                suffix = suffix.checked_add(1).ok_or_else(|| "No unique output path available".to_string())?;
+            }
+            Err(error) => return Err(error.to_string()),
+        }
     }
 }
 
@@ -454,5 +486,20 @@ mod tests {
         let a = format!("{}", Uuid::new_v4().simple());
         let b = format!("{}", Uuid::new_v4().simple());
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn reserve_unique_path_is_atomic() {
+        let dir = std::env::temp_dir().join(format!("stroygetter-test-{}", Uuid::new_v4().simple()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let base = dir.join("track.mp3");
+
+        let first = reserve_unique_path(&base).unwrap();
+        let second = reserve_unique_path(&base).unwrap();
+
+        assert_ne!(first, second);
+        assert!(first.exists());
+        assert!(second.exists());
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

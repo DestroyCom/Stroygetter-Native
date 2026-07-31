@@ -23,4 +23,10 @@ describe("getErrorMessage", () => {
     expect(getErrorMessage("  ", "Download failed")).toBe("Download failed");
     expect(getErrorMessage({ reason: "unknown" }, "Download failed")).toBe("Download failed");
   });
+
+  it("clamps invalid display limits", () => {
+    expect(getErrorMessage("abcdef", "Download failed", 0)).toBe("…");
+    expect(getErrorMessage("abcdef", "Download failed", -10)).toBe("…");
+    expect(getErrorMessage("abcdef", "Download failed", Number.NaN)).toBe("abcdef");
+  });
 });

@@ -91,33 +91,40 @@ jobs:
 
       - name: Download yt-dlp (Unix)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os != 'Windows'
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
+          YTDLP_ASSET: ${{ matrix.ytdlp-asset }}
         run: |
           curl -fsSL \
-            "https://github.com/yt-dlp/yt-dlp/releases/latest/download/${{ matrix.ytdlp-asset }}" \
-            -o "src-tauri/binaries/yt-dlp-${{ matrix.rust-target }}"
-          chmod +x "src-tauri/binaries/yt-dlp-${{ matrix.rust-target }}"
+            "https://github.com/yt-dlp/yt-dlp/releases/latest/download/$YTDLP_ASSET" \
+            -o "src-tauri/binaries/yt-dlp-$RUST_TARGET"
+          chmod +x "src-tauri/binaries/yt-dlp-$RUST_TARGET"
 
       - name: Download yt-dlp (Windows)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
         shell: pwsh
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
         run: |
           Invoke-WebRequest `
             -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" `
-            -OutFile "src-tauri\binaries\yt-dlp-${{ matrix.rust-target }}.exe"
+            -OutFile "src-tauri\binaries\yt-dlp-$env:RUST_TARGET.exe"
 
       - name: Copy static ffmpeg sidecar (Unix)
-        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os != 'Windows'
+        if: runner.os != 'Windows'
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
         run: |
-          ffmpeg_path="$(node -e "process.stdout.write(require('ffmpeg-static'))")"
-          test -x "$ffmpeg_path"
-          cp "$ffmpeg_path" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
-          chmod +x "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+          TAURI_TARGET="$RUST_TARGET" node scripts/copy-verified-ffmpeg.cjs \
+            "src-tauri/binaries/ffmpeg-$RUST_TARGET"
 
       - name: Verify macOS ffmpeg sidecar
         if: runner.os == 'macOS'
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
         run: |
           bash scripts/verify-macos-ffmpeg.sh \
-            "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+            "src-tauri/binaries/ffmpeg-$RUST_TARGET"
 
       - name: Download ffmpeg (Windows)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'

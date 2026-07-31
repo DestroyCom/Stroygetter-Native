@@ -175,7 +175,7 @@ export function Fetch() {
 			toast.success(t("toast.downloadComplete", "Téléchargement terminé"));
 		} catch (e: unknown) {
 			const errorMsg = getErrorMessage(e, t("videoSelect.errorDownload"));
-			trackEvent("download_failed", { source, format, error: errorMsg });
+			trackEvent("download_failed", { source, format });
 			setDownloadError(errorMsg);
 		} finally {
 			setIsDownloading(false);

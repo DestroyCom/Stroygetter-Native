@@ -4,15 +4,18 @@ Non versionnés (voir `.gitignore`) — téléchargés automatiquement par le CI
 Pour un build local sur Apple Silicon :
 
 ```bash
+# Run this block from the repository root.
 curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos \
-  -o yt-dlp-aarch64-apple-darwin && chmod +x yt-dlp-aarch64-apple-darwin
+  -o src-tauri/binaries/yt-dlp-aarch64-apple-darwin
+chmod +x src-tauri/binaries/yt-dlp-aarch64-apple-darwin
 
 npm ci
-cp "$(node -e "process.stdout.write(require('ffmpeg-static'))")" \
-  ffmpeg-aarch64-apple-darwin
-chmod +x ffmpeg-aarch64-apple-darwin
-bash scripts/verify-macos-ffmpeg.sh ffmpeg-aarch64-apple-darwin
+TAURI_TARGET=aarch64-apple-darwin node scripts/copy-verified-ffmpeg.cjs \
+  src-tauri/binaries/ffmpeg-aarch64-apple-darwin
+bash scripts/verify-macos-ffmpeg.sh \
+  src-tauri/binaries/ffmpeg-aarch64-apple-darwin
 
 curl -fsSL https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/bgutil-pot-macos-aarch64 \
-  -o bgutil-pot-aarch64-apple-darwin && chmod +x bgutil-pot-aarch64-apple-darwin
+  -o src-tauri/binaries/bgutil-pot-aarch64-apple-darwin
+chmod +x src-tauri/binaries/bgutil-pot-aarch64-apple-darwin
 ```

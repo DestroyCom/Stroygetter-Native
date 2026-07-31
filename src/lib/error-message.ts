@@ -5,6 +5,7 @@
  * fallback message.
  */
 export function getErrorMessage(error: unknown, fallback: string, maxLength = 280): string {
+  const limit = Number.isFinite(maxLength) ? Math.max(1, Math.floor(maxLength)) : 280;
   let message: string | null = null;
 
   if (error instanceof Error) {
@@ -20,6 +21,6 @@ export function getErrorMessage(error: unknown, fallback: string, maxLength = 28
 
   const normalized = message?.replace(/\s+/g, " ").trim();
   if (!normalized) return fallback;
-  if (normalized.length <= maxLength) return normalized;
-  return `${normalized.slice(0, maxLength - 1)}…`;
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit - 1)}…`;
 }
