@@ -1,8 +1,9 @@
-use crate::commands::download::{effective_dir, get_sidecar_exe, validate_url};
+use crate::commands::download::{effective_dir, get_sidecar_exe, reserve_unique_path, validate_url};
 use crate::commands::settings::{build_common_args, build_youtube_args, DownloadSettingsState};
 use crate::db::{self, DbConn, DownloadRecord};
 use crate::sidecar;
 use serde::Serialize;
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::mpsc;
@@ -27,6 +28,23 @@ fn sanitize(s: &str) -> String {
         .collect::<String>()
         .trim()
         .to_string()
+}
+
+fn remove_if_present(path: &Path) {
+    if let Err(error) = std::fs::remove_file(path) {
+        if error.kind() != std::io::ErrorKind::NotFound {
+            log::warn!("Could not remove temporary file {}: {}", path.display(), error);
+        }
+    }
+}
+
+// std::fs::rename overwrites an existing destination file on Windows too
+// (MoveFileExW / SetFileInformationByHandle), same as POSIX rename(2) — no
+// need to remove `reserved` first. Doing so would reopen exactly the race
+// window reserve_unique_path exists to close: the path is briefly free and
+// another reservation could claim it before this rename lands.
+fn publish_reserved_output(temp: &Path, reserved: &Path) -> Result<(), String> {
+    std::fs::rename(temp, reserved).map_err(|error| error.to_string())
 }
 
 // Downloads a URL and returns the body bytes.
@@ -65,7 +83,18 @@ pub async fn download_library_ready(
     let tmp_id = uuid::Uuid::new_v4().simple().to_string();
     let tmp_audio = std::env::temp_dir().join(format!("stroygetter_{}_{}_audio.mp3", tmp_id, safe));
     let tmp_cover = std::env::temp_dir().join(format!("stroygetter_{}_{}_cover.jpg", tmp_id, safe));
-    let out = effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe));
+    let output_dir = effective_dir(settings.download_dir.as_deref());
+    let out = reserve_unique_path(&output_dir.join(format!("{}.mp3", safe)))?;
+    let tmp_output = output_dir.join(format!(".{}.{}.part.mp3", safe, tmp_id));
+    let cleanup_temporary = || {
+        remove_if_present(&tmp_audio);
+        remove_if_present(&tmp_cover);
+        remove_if_present(&tmp_output);
+    };
+    let cleanup_failed = || {
+        cleanup_temporary();
+        remove_if_present(&out);
+    };
 
     // Phase 1: download audio via yt-dlp
     emit_progress(&app, "downloading", 0.0);
@@ -103,7 +132,10 @@ pub async fn download_library_ready(
     ytdlp_args.extend(["-o".to_string(), tmp_audio_str.clone(), url.clone()]);
 
     let ytdlp_args_ref: Vec<&str> = ytdlp_args.iter().map(|s| s.as_str()).collect();
-    sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args_ref, Some(tx)).await?;
+    if let Err(error) = sidecar::run_sidecar(&app, "yt-dlp", &ytdlp_args_ref, Some(tx)).await {
+        cleanup_failed();
+        return Err(error);
+    }
 
     // Phase 2: download cover image — try primary URL, fall back, proceed without on failure
     emit_progress(&app, "fetching_cover", 0.0);
@@ -123,7 +155,10 @@ pub async fn download_library_ready(
     };
 
     let has_cover = if let Some(ref bytes) = cover_bytes {
-        std::fs::write(&tmp_cover, bytes).map_err(|e| e.to_string())?;
+        if let Err(error) = std::fs::write(&tmp_cover, bytes) {
+            cleanup_failed();
+            return Err(error.to_string());
+        }
         true
     } else {
         false
@@ -171,21 +206,34 @@ pub async fn download_library_ready(
         ]);
     }
 
-    ffmpeg_args.push(out.to_string_lossy().to_string());
+    ffmpeg_args.push(tmp_output.to_string_lossy().to_string());
 
     let args_ref: Vec<&str> = ffmpeg_args.iter().map(|s| s.as_str()).collect();
-    sidecar::run_sidecar(&app, "ffmpeg", &args_ref, None).await?;
+    if let Err(error) = sidecar::run_sidecar(&app, "ffmpeg", &args_ref, None).await {
+        cleanup_failed();
+        return Err(error);
+    }
 
     emit_progress(&app, "embedding", 100.0);
 
-    let _ = std::fs::remove_file(&tmp_audio);
-    let _ = std::fs::remove_file(&tmp_cover);
+    if let Err(error) = publish_reserved_output(&tmp_output, &out) {
+        cleanup_failed();
+        return Err(error);
+    }
+
+    cleanup_temporary();
 
     let out_str = out.to_string_lossy().to_string();
 
     let db = app.state::<DbConn>();
-    let conn = db.0.lock().map_err(|e| e.to_string())?;
-    db::insert(
+    let conn = match db.0.lock() {
+        Ok(conn) => conn,
+        Err(error) => {
+            remove_if_present(&out);
+            return Err(error.to_string());
+        }
+    };
+    if let Err(error) = db::insert(
         &conn,
         &DownloadRecord {
             id: uuid::Uuid::new_v4().to_string(),
@@ -197,8 +245,10 @@ pub async fn download_library_ready(
             file_path: out_str.clone(),
             created_at: now_ts(),
         },
-    )
-    .map_err(|e| e.to_string())?;
+    ) {
+        remove_if_present(&out);
+        return Err(error.to_string());
+    }
 
     Ok(out_str)
 }

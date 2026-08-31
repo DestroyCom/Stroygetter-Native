@@ -53,6 +53,11 @@ jobs:
             touch "src-tauri/binaries/${bin}-x86_64-unknown-linux-gnu"
             chmod +x "src-tauri/binaries/${bin}-x86_64-unknown-linux-gnu"
           done
+          # tauri.linux.conf.json declares binaries/bgutil-pot-libs/ as a bundle
+          # resource (see sidecar.rs) — tauri-build fails at cargo-check time if
+          # the path doesn't exist, so the placeholder set needs it too.
+          mkdir -p src-tauri/binaries/bgutil-pot-libs
+          touch src-tauri/binaries/bgutil-pot-libs/.placeholder
 
       - run: cargo check --manifest-path src-tauri/Cargo.toml
 

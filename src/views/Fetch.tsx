@@ -17,6 +17,7 @@ import {
 	onDownloadProgress,
 } from "@/lib/commands";
 import { resolveLibraryReadyMetadata } from "@/lib/metadata";
+import { getErrorMessage } from "@/lib/error-message";
 import type { DownloadFormat, VideoInfo } from "@/lib/types";
 
 export function Fetch() {
@@ -173,9 +174,8 @@ export function Fetch() {
 			window.dispatchEvent(new Event("download-complete"));
 			toast.success(t("toast.downloadComplete", "Téléchargement terminé"));
 		} catch (e: unknown) {
-			const errorMsg =
-				e instanceof Error ? e.message : t("videoSelect.errorDownload");
-			trackEvent("download_failed", { source, format, error: errorMsg });
+			const errorMsg = getErrorMessage(e, t("videoSelect.errorDownload"));
+			trackEvent("download_failed", { source, format });
 			setDownloadError(errorMsg);
 		} finally {
 			setIsDownloading(false);
