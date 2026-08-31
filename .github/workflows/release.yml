@@ -174,7 +174,7 @@ jobs:
       # and bundle them as a resource; src-tauri/src/sidecar.rs points LD_LIBRARY_PATH at them
       # when spawning bgutil-pot, so the sidecar never touches the host's OpenSSL.
       - name: Bundle bgutil-pot OpenSSL libs (Linux)
-        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        if: runner.os == 'Linux'
         run: |
           mkdir -p src-tauri/binaries/bgutil-pot-libs
           for lib in libssl.so.3 libcrypto.so.3; do
