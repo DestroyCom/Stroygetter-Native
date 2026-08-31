@@ -12,6 +12,7 @@ import {
 	readLocalImageAsDataUrl,
 	writeAudioMetadata,
 } from "@/lib/commands";
+import { getErrorMessage } from "@/lib/error-message";
 import { searchItunesCover } from "@/lib/metadata";
 import type { ItunesCoverResult, WriteMetadataArgs } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -106,7 +107,7 @@ export function MetadataEditor() {
 				runItunesSearch(q);
 			}
 		} catch (e) {
-			setLoadError(e instanceof Error ? e.message : "Failed to read file");
+			setLoadError(getErrorMessage(e, "Failed to read file"));
 		} finally {
 			setIsLoading(false);
 		}
@@ -175,9 +176,7 @@ export function MetadataEditor() {
 			setSaveSuccess(true);
 			toast.success(t("toast.metadataSaved", "Métadonnées sauvegardées"));
 		} catch (e) {
-			setSaveError(
-				e instanceof Error ? e.message : t("metadataEditor.saveError"),
-			);
+			setSaveError(getErrorMessage(e, t("metadataEditor.saveError")));
 		} finally {
 			setIsSaving(false);
 		}
