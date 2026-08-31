@@ -30,11 +30,15 @@ pub async fn run_sidecar(
     // the sidecar's loader at them via LD_LIBRARY_PATH so it doesn't depend on the host's OpenSSL.
     #[cfg(target_os = "linux")]
     if name == "bgutil-pot" {
-        if let Ok(libs_dir) = app
+        match app
             .path()
             .resolve("bgutil-pot-libs", tauri::path::BaseDirectory::Resource)
         {
-            cmd = cmd.env("LD_LIBRARY_PATH", libs_dir);
+            Ok(libs_dir) => cmd = cmd.env("LD_LIBRARY_PATH", libs_dir),
+            Err(e) => log::warn!(
+                "[sidecar] could not resolve bgutil-pot-libs resource dir: {e} — \
+                 bgutil-pot may fail to load its bundled OpenSSL libs"
+            ),
         }
     }
 

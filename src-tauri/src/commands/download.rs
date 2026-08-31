@@ -32,25 +32,6 @@ pub fn effective_dir(custom: Option<&str>) -> std::path::PathBuf {
     dirs::download_dir().unwrap_or_else(|| std::path::PathBuf::from("."))
 }
 
-pub(crate) fn unique_path(base: &std::path::Path) -> std::path::PathBuf {
-    if !base.exists() {
-        return base.to_path_buf();
-    }
-    let stem = base.file_stem().unwrap_or_default().to_string_lossy().to_string();
-    let ext = base.extension()
-        .map(|e| format!(".{}", e.to_string_lossy()))
-        .unwrap_or_default();
-    let dir = base.parent().unwrap_or(std::path::Path::new("."));
-    let mut i = 1u32;
-    loop {
-        let candidate = dir.join(format!("{} ({}){}", stem, i, ext));
-        if !candidate.exists() {
-            return candidate;
-        }
-        i += 1;
-    }
-}
-
 /// Atomically reserves a unique output path by creating it before the download starts.
 /// The caller owns the reservation and must remove it if the operation fails.
 pub(crate) fn reserve_unique_path(base: &std::path::Path) -> Result<std::path::PathBuf, String> {
@@ -210,7 +191,7 @@ pub async fn download_video(
     let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
-    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp4", safe)));
+    let out = reserve_unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp4", safe)))?;
     let out_str = out.to_string_lossy().to_string();
 
     let tmp_id = Uuid::new_v4().simple().to_string();
@@ -250,21 +231,26 @@ pub async fn download_video(
     let cleanup = || {
         let _ = std::fs::remove_dir_all(&tmp_subdir);
     };
-    if let Err(e) = video_result { cleanup(); log::error!("download_video: video stream failed — {e}"); return Err(e); }
-    if let Err(e) = audio_result { cleanup(); log::error!("download_video: audio stream failed — {e}"); return Err(e); }
+    let cleanup_failed = || {
+        cleanup();
+        let _ = std::fs::remove_file(&out);
+    };
+    if let Err(e) = video_result { cleanup_failed(); log::error!("download_video: video stream failed — {e}"); return Err(e); }
+    if let Err(e) = audio_result { cleanup_failed(); log::error!("download_video: audio stream failed — {e}"); return Err(e); }
 
-    let ffmpeg = get_sidecar_exe("ffmpeg").ok_or_else(|| { cleanup(); "ffmpeg not found".to_string() })?;
+    let ffmpeg = get_sidecar_exe("ffmpeg").ok_or_else(|| { cleanup_failed(); "ffmpeg not found".to_string() })?;
     log::debug!("download_video: merging → {out_str}");
     let merge = tokio::process::Command::new(&ffmpeg)
         .args(["-i", &video_tmp_str, "-i", &audio_tmp_str,
                "-map", "0:v", "-map", "1:a", "-c", "copy", "-y", &out_str])
         .output()
         .await
-        .map_err(|e| { cleanup(); e.to_string() })?;
+        .map_err(|e| { cleanup_failed(); e.to_string() })?;
     cleanup();
 
     if !merge.status.success() {
         let err = String::from_utf8_lossy(&merge.stderr).to_string();
+        let _ = std::fs::remove_file(&out);
         log::error!("download_video: ffmpeg merge failed — {err}");
         return Err(format!("ffmpeg merge failed: {err}"));
     }
@@ -290,11 +276,14 @@ pub async fn download_audio(
     let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
     let safe = sanitize(&title);
-    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe)));
+    let out = reserve_unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe)))?;
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = build_youtube_args();
     args.extend([
+        // out already exists as an empty reservation placeholder — without this,
+        // yt-dlp treats it as "already downloaded" and skips the real download.
+        "--force-overwrites".to_string(),
         "-x".to_string(),
         "--audio-format".to_string(), "mp3".to_string(),
         "--audio-quality".to_string(), "192K".to_string(),
@@ -313,6 +302,7 @@ pub async fn download_audio(
     log::info!("download_audio: start url={url} title={title:?}");
     let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
     if let Err(ref e) = result {
+        let _ = std::fs::remove_file(&out);
         log::error!("download_audio: failed — {e}");
         return Err(e.clone());
     }
@@ -341,13 +331,16 @@ pub async fn download_tiktok(
     validate_url(&url)?;
     let safe = sanitize(&title);
     let ext = if audio_only { "mp3" } else { "mp4" };
-    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.{}", safe, ext)));
+    let out = reserve_unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.{}", safe, ext)))?;
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = vec![
         "--no-check-certificates".to_string(),
         "--no-warnings".to_string(),
         "--no-playlist".to_string(),
+        // out already exists as an empty reservation placeholder — without this,
+        // yt-dlp treats it as "already downloaded" and skips the real download.
+        "--force-overwrites".to_string(),
     ];
 
     if audio_only {
@@ -373,6 +366,7 @@ pub async fn download_tiktok(
     log::info!("download_tiktok: start url={url} audio_only={audio_only} watermark={watermark}");
     let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
     if let Err(ref e) = result {
+        let _ = std::fs::remove_file(&out);
         log::error!("download_tiktok: failed — {e}");
         return Err(e.clone());
     }
@@ -403,10 +397,12 @@ pub async fn download_twitch(
     let safe = sanitize(&title);
     let is_audio = format_id == "audio";
     let ext = if is_audio { "mp3" } else { "mp4" };
-    let out = unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.{}", safe, ext)));
+    let out = reserve_unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.{}", safe, ext)))?;
     let out_str = out.to_string_lossy().to_string();
 
-    let mut args = vec![];
+    // out already exists as an empty reservation placeholder — without this,
+    // yt-dlp treats it as "already downloaded" and skips the real download.
+    let mut args = vec!["--force-overwrites".to_string()];
     if is_audio {
         args.extend(["-x".to_string(), "--audio-format".to_string(), "mp3".to_string()]);
         if let Some(ffmpeg) = get_sidecar_exe("ffmpeg") {
@@ -421,6 +417,7 @@ pub async fn download_twitch(
     log::info!("download_twitch: start url={url} format_id={format_id}");
     let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
     if let Err(ref e) = result {
+        let _ = std::fs::remove_file(&out);
         log::error!("download_twitch: failed — {e}");
         return Err(e.clone());
     }

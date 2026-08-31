@@ -38,17 +38,13 @@ fn remove_if_present(path: &Path) {
     }
 }
 
+// std::fs::rename overwrites an existing destination file on Windows too
+// (MoveFileExW / SetFileInformationByHandle), same as POSIX rename(2) — no
+// need to remove `reserved` first. Doing so would reopen exactly the race
+// window reserve_unique_path exists to close: the path is briefly free and
+// another reservation could claim it before this rename lands.
 fn publish_reserved_output(temp: &Path, reserved: &Path) -> Result<(), String> {
-    #[cfg(unix)]
-    {
-        std::fs::rename(temp, reserved).map_err(|error| error.to_string())
-    }
-
-    #[cfg(not(unix))]
-    {
-        std::fs::remove_file(reserved).map_err(|error| error.to_string())?;
-        std::fs::rename(temp, reserved).map_err(|error| error.to_string())
-    }
+    std::fs::rename(temp, reserved).map_err(|error| error.to_string())
 }
 
 // Downloads a URL and returns the body bytes.
