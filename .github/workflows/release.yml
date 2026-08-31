@@ -67,8 +67,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y \
             libgtk-3-dev libwebkit2gtk-4.1-dev \
-            libappindicator3-dev librsvg2-dev patchelf \
-            ffmpeg
+            libappindicator3-dev librsvg2-dev patchelf
 
       # ── Sidecar binaries (cached monthly) ───────────────────────────────────
       - name: Cache month (sidecar rotation)
@@ -104,12 +103,52 @@ jobs:
       - name: Install ffmpeg (macOS)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'macOS'
         run: |
-          brew install --quiet ffmpeg
+          brew install --quiet ffmpeg dylibbundler
           cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
 
-      - name: Copy ffmpeg (Linux)
+          # brew's ffmpeg is dynamically linked against Homebrew's own Cellar dylibs
+          # (version-pinned absolute paths, e.g. /opt/homebrew/Cellar/ffmpeg/8.1.2/...).
+          # That breaks dyld on any machine without that exact Homebrew ffmpeg version
+          # installed — which is every end user. Bundle the dylibs it needs into the app
+          # and rewrite the binary's load commands to point at them instead, so ffmpeg
+          # is fully self-contained. Libs land in src-tauri/binaries/ffmpeg-libs, which
+          # tauri.macos.conf.json copies to Contents/Resources/ffmpeg-libs at build time.
+          rm -rf "src-tauri/binaries/ffmpeg-libs"
+          dylibbundler -od -b \
+            -x "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}" \
+            -d "src-tauri/binaries/ffmpeg-libs" \
+            -p "@executable_path/../Resources/ffmpeg-libs/"
+
+      # apt's ffmpeg links dynamically against the distro's own package versions
+      # (same class of bug as the old macOS brew approach — breaks on any distro/version
+      # whose libs don't match ubuntu-22.04's). BtbN's non-"-shared" build is statically
+      # linked against everything except baseline glibc (libc/libm/libpthread/libgcc_s —
+      # present on every glibc Linux), so it needs no bundling, unlike ffmpeg on macOS.
+      - name: Download ffmpeg (Linux)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Linux'
-        run: cp "$(which ffmpeg)" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+        env:
+          FFMPEG_ASSET: "ffmpeg-master-latest-linux64-gpl.tar.xz"
+        run: |
+          baseUrl="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
+          curl -fsSL "$baseUrl/$FFMPEG_ASSET" -o "$FFMPEG_ASSET"
+          curl -fsSL "$baseUrl/checksums.sha256" -o checksums.sha256
+
+          checksum_line=$(grep -F -- " $FFMPEG_ASSET" checksums.sha256)
+          if [ -z "$checksum_line" ]; then
+            echo "Could not find checksum entry for $FFMPEG_ASSET in checksums.sha256" >&2
+            exit 1
+          fi
+          if ! echo "$checksum_line" | sha256sum -c -; then
+            echo "ffmpeg SHA256 mismatch for $FFMPEG_ASSET" >&2
+            exit 1
+          fi
+
+          mkdir ffmpeg_tmp
+          tar xf "$FFMPEG_ASSET" -C ffmpeg_tmp
+          bin=$(find ffmpeg_tmp -type f -name ffmpeg | head -1)
+          cp "$bin" "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+          chmod +x "src-tauri/binaries/ffmpeg-${{ matrix.rust-target }}"
+          rm -rf "$FFMPEG_ASSET" checksums.sha256 ffmpeg_tmp
 
       - name: Download ffmpeg (Windows)
         if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Windows'
@@ -152,6 +191,24 @@ jobs:
           Invoke-WebRequest `
             -Uri "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/${{ matrix.bgutil-asset }}" `
             -OutFile "src-tauri\binaries\bgutil-pot-${{ matrix.rust-target }}.exe"
+
+      # bgutil-pot's upstream Linux build links dynamically against libssl.so.3/libcrypto.so.3
+      # (OpenSSL 3.x) — absent on distros still on OpenSSL 1.1 (e.g. Ubuntu 20.04). Resolve the
+      # exact files this build needs via ldd (native arch on this runner, so ldd works directly)
+      # and bundle them as a resource; src-tauri/src/sidecar.rs points LD_LIBRARY_PATH at them
+      # when spawning bgutil-pot, so the sidecar never touches the host's OpenSSL.
+      - name: Bundle bgutil-pot OpenSSL libs (Linux)
+        if: steps.cache-sidecars.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        run: |
+          mkdir -p src-tauri/binaries/bgutil-pot-libs
+          for lib in libssl.so.3 libcrypto.so.3; do
+            path=$(ldd "src-tauri/binaries/bgutil-pot-${{ matrix.rust-target }}" | awk -v l="$lib" '$1==l {print $3}')
+            if [ -z "$path" ]; then
+              echo "Could not resolve $lib via ldd for bgutil-pot" >&2
+              exit 1
+            fi
+            cp "$path" "src-tauri/binaries/bgutil-pot-libs/$lib"
+          done
 
       # ── Frontend ─────────────────────────────────────────────────────────────
       - run: npm ci

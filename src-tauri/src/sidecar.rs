@@ -1,4 +1,6 @@
 use tauri::AppHandle;
+#[cfg(target_os = "linux")]
+use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::sync::mpsc;
@@ -21,6 +23,20 @@ pub async fn run_sidecar(
         .shell()
         .sidecar(name)
         .map_err(|e| format!("sidecar '{}' not found: {}", name, e))?;
+
+    // bgutil-pot's upstream Linux release links dynamically against libssl.so.3/libcrypto.so.3
+    // (OpenSSL 3.x), absent on distros still on OpenSSL 1.1 (e.g. Ubuntu 20.04). CI bundles
+    // those .so files as a resource under bgutil-pot-libs/ (see tauri.linux.conf.json) — point
+    // the sidecar's loader at them via LD_LIBRARY_PATH so it doesn't depend on the host's OpenSSL.
+    #[cfg(target_os = "linux")]
+    if name == "bgutil-pot" {
+        if let Ok(libs_dir) = app
+            .path()
+            .resolve("bgutil-pot-libs", tauri::path::BaseDirectory::Resource)
+        {
+            cmd = cmd.env("LD_LIBRARY_PATH", libs_dir);
+        }
+    }
 
     for arg in args {
         cmd = cmd.arg(*arg);
