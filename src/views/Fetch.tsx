@@ -83,7 +83,7 @@ export function Fetch() {
 
 		const source = info.source;
 		const format: "video" | "audio" | "library_ready" =
-			fmt === "mp3" || fmt === "tiktok-audio" || fmt === "twitch-audio"
+			fmt === "mp3" || fmt === "wav" || fmt === "tiktok-audio" || fmt === "twitch-audio"
 				? "audio"
 				: fmt === "library-ready"
 					? "library_ready"
@@ -103,6 +103,8 @@ export function Fetch() {
 				);
 			} else if (fmt === "mp3") {
 				await downloadAudio(url, info.title, info.author, info.thumbnail);
+			} else if (fmt === "wav") {
+				await downloadAudio(url, info.title, info.author, info.thumbnail, "wav");
 			} else if (fmt === "tiktok-no-watermark") {
 				await downloadTiktok(
 					url,

@@ -1,4 +1,4 @@
-import { Disc3, Download, Film, Music } from "lucide-react";
+import { AudioWaveform, Disc3, Download, Film, Music } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
@@ -23,6 +23,7 @@ export function VideoSelect({ info, onDownload, isDownloading, progress, downloa
     { id: "library-ready", label: t("videoSelect.formatLibraryReady"), sub: t("videoSelect.formatLibraryReadySub"), Icon: Disc3 },
     { id: "mp4", label: t("videoSelect.formatMp4"), sub: t("videoSelect.formatMp4Sub"), Icon: Film },
     { id: "mp3", label: t("videoSelect.formatMp3"), sub: t("videoSelect.formatMp3Sub"), Icon: Music },
+    { id: "wav", label: t("videoSelect.formatWav"), sub: t("videoSelect.formatWavSub"), Icon: AudioWaveform },
   ];
 
   const TIKTOK_TABS: TabDef[] = [

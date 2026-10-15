@@ -272,11 +272,14 @@ pub async fn download_audio(
     title: String,
     author: String,
     thumbnail: Option<String>,
+    format: Option<String>,
 ) -> Result<String, String> {
     let settings = dl_settings.0.lock().map_err(|e| e.to_string())?.clone();
     validate_url(&url)?;
+    // Anything other than "wav" falls back to MP3 (same contract as the web ?format= param).
+    let ext = if format.as_deref() == Some("wav") { "wav" } else { "mp3" };
     let safe = sanitize(&title);
-    let out = reserve_unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.mp3", safe)))?;
+    let out = reserve_unique_path(&effective_dir(settings.download_dir.as_deref()).join(format!("{}.{}", safe, ext)))?;
     let out_str = out.to_string_lossy().to_string();
 
     let mut args = build_youtube_args();
@@ -285,9 +288,17 @@ pub async fn download_audio(
         // yt-dlp treats it as "already downloaded" and skips the real download.
         "--force-overwrites".to_string(),
         "-x".to_string(),
-        "--audio-format".to_string(), "mp3".to_string(),
-        "--audio-quality".to_string(), "192K".to_string(),
+        "--audio-format".to_string(), ext.to_string(),
     ]);
+    if ext == "wav" {
+        // PCM 16-bit · 44.1 kHz, matching the web WAV output.
+        args.extend([
+            "--postprocessor-args".to_string(),
+            "ExtractAudio:-acodec pcm_s16le -ar 44100".to_string(),
+        ]);
+    } else {
+        args.extend(["--audio-quality".to_string(), "192K".to_string()]);
+    }
     if crate::pot::is_youtube_url(&url) {
         if let Some(token) = crate::pot::get_po_token(&app, &url).await {
             args.extend(crate::pot::build_pot_args(&token));
@@ -299,7 +310,7 @@ pub async fn download_audio(
     }
     args.extend(["-o".to_string(), out_str.clone(), url.clone()]);
 
-    log::info!("download_audio: start url={url} title={title:?}");
+    log::info!("download_audio: start url={url} title={title:?} format={ext}");
     let result = run_with_progress(&app, "yt-dlp", args, "downloading", &settings).await;
     if let Err(ref e) = result {
         let _ = std::fs::remove_file(&out);
@@ -310,7 +321,7 @@ pub async fn download_audio(
 
     let db = app.state::<DbConn>();
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    db::insert(&conn, &record_from(&url, &title, &author, thumbnail.as_deref(), "mp3", &out_str))
+    db::insert(&conn, &record_from(&url, &title, &author, thumbnail.as_deref(), ext, &out_str))
         .map_err(|e| e.to_string())?;
 
     Ok(out_str)
