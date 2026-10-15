@@ -176,6 +176,8 @@
     "formatMp4Sub": "H.264 · source resolution",
     "formatMp3": "MP3 audio",
     "formatMp3Sub": "190 kbps",
+    "formatWav": "WAV audio",
+    "formatWavSub": "PCM 16-bit · 44.1 kHz",
     "formatTiktokNoWatermark": "No watermark",
     "formatTiktokNoWatermarkSub": "MP4 · clean",
     "formatTiktokWatermark": "With watermark",

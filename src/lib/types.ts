@@ -27,6 +27,7 @@ export interface DownloadRecord {
 export type DownloadFormat =
   | "mp4"
   | "mp3"
+  | "wav"
   | "library-ready"
   | "tiktok-no-watermark"
   | "tiktok-watermark"

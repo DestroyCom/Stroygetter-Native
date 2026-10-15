@@ -94,7 +94,7 @@ Frontend (React/Vite)
             └─ retourne VideoInfo struct → JSON → frontend
 
   └─ invoke("download_video", { url, itag, title })
-  └─ invoke("download_audio", { url, title })
+  └─ invoke("download_audio", { url, title, author, thumbnail, format })   ← format: "mp3" (défaut) | "wav" (PCM 16-bit · 44.1 kHz)
   └─ invoke("download_tiktok", { url, itag, title })
   └─ invoke("download_twitch", { url, title })
        └─ src-tauri/src/commands/download.rs

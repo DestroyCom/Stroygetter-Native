@@ -38,9 +38,9 @@ export const downloadVideo = (
   });
 
 export const downloadAudio = (
-  url: string, title: string, author: string, thumbnail?: string
+  url: string, title: string, author: string, thumbnail?: string, format: "mp3" | "wav" = "mp3"
 ): Promise<string> =>
-  invoke<string>("download_audio", { url, title, author, thumbnail }).catch((e) => {
+  invoke<string>("download_audio", { url, title, author, thumbnail, format }).catch((e) => {
     captureIfEnabled(e, { command: "download_audio" });
     throw e;
   });
